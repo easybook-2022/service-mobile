@@ -78,7 +78,7 @@ export default function App() {
               )
             })}/>
             <Stack.Screen name="cartorders" component={Cartorders} options={({ navigation, route }) => ({
-              headerTitle: () => <Text style={styles.header}>#{route.params.ordernumber} {tr.t("orders.header")}</Text>,
+              headerTitle: () => <Text style={styles.header}>{tr.t("orders.header")}</Text>,
               headerLeft: () => (
                 Platform.OS == 'ios' && (
                   <TouchableOpacity style={styles.back} onPress={() => navigation.dispatch(

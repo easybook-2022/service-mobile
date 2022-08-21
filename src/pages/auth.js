@@ -23,7 +23,7 @@ export default function Auth({ navigation }) {
   const [errorMsg, setErrormsg] = useState('')
 
   const login = () => {
-    const data = { cellnumber, password }
+    const data = { cellnumber, password, worker: true }
     
     loginUser(data)
       .then((res) => {

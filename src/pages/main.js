@@ -3138,123 +3138,60 @@ export default function Main(props) {
             {viewType == "appointments_list" && ( 
               !appointments.loading ?
                 appointments.list.length > 0 ? 
-                  <>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                      {appointments.list.map((item, index) => (
-                        <View key={item.key} style={styles.schedule}>
-                          <View style={{ flexDirection: 'row' }}>
-                            <TouchableOpacity style={styles.scheduleRemove} onPress={() => showScheduleOption(item.id, "list", index, "remove")}>
-                              <AntDesign name="close" size={wsize(5)}/>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {appointments.list.map((item, index) => (
+                      <View key={item.key} style={styles.schedule}>
+                        <View style={{ flexDirection: 'row' }}>
+                          <TouchableOpacity style={styles.scheduleRemove} onPress={() => showScheduleOption(item.id, "list", index, "remove")}>
+                            <AntDesign name="close" size={wsize(5)}/>
+                          </TouchableOpacity>
+                          <Text style={[styles.scheduleHeader, { fontSize: wsize(4), fontWeight: 'bold' }]}>#{index + 1} ({item.worker.id == ownerId ? "you" : item.worker.username})</Text>
+                        </View>
+
+                        <Text style={styles.scheduleHeader}>{item.name}</Text>
+
+                        {item.image.name && (
+                          <View style={styles.scheduleImageHolder}>
+                            <Image 
+                              style={resizePhoto(item.image, wsize(20))} 
+                              source={{ uri: logo_url + item.image.name }}
+                            />
+                          </View>
+                        )}
+
+                        <View>
+                          <Text style={styles.scheduleHeader}>
+                            {tr.t("main.list.client") + ': ' + item.client.username}
+                          </Text>
+                        </View>
+                        <View>
+                          <Text style={styles.scheduleTimeHeader}>
+                            {displayTime(item.time)
+                                .replace("today at", tr.t("headers.todayAt"))
+                                .replace("tomorrow at", tr.t("headers.tomorrowAt"))
+                            }
+                          </Text>
+                        </View>
+
+                        <Text style={[styles.scheduleHeader, { fontSize: wsize(3) }]}>({(item.type == "confirmed" ? "app booked" : "walk-in booked")})</Text>
+
+                        <View style={styles.scheduleActions}>
+                          <View style={styles.column}>
+                            <TouchableOpacity style={styles.scheduleAction} onPress={() => {
+                              props.navigation.navigate("booktime", { scheduleid: item.id, serviceid: item.serviceid, serviceinfo: item.name })
+                            }}>
+                              <Text style={styles.scheduleActionHeader}>{tr.t("main.list.change")}</Text>
                             </TouchableOpacity>
-                            <Text style={[styles.scheduleHeader, { fontSize: wsize(4), fontWeight: 'bold' }]}>#{index + 1} ({item.worker.id == ownerId ? "you" : item.worker.username})</Text>
                           </View>
-
-                          <Text style={styles.scheduleHeader}>{item.name}</Text>
-
-                          {item.image.name && (
-                            <View style={styles.scheduleImageHolder}>
-                              <Image 
-                                style={resizePhoto(item.image, wsize(20))} 
-                                source={{ uri: logo_url + item.image.name }}
-                              />
-                            </View>
-                          )}
-
-                          <View>
-                            <Text style={styles.scheduleHeader}>
-                              {tr.t("main.list.client") + ': ' + item.client.username}
-                            </Text>
-                          </View>
-                          <View>
-                            <Text style={styles.scheduleTimeHeader}>
-                              {displayTime(item.time)
-                                  .replace("today at", tr.t("headers.todayAt"))
-                                  .replace("tomorrow at", tr.t("headers.tomorrowAt"))
-                              }
-                            </Text>
-                          </View>
-
-                          <Text style={[styles.scheduleHeader, { fontSize: wsize(3) }]}>({(item.type == "confirmed" ? "app booked" : "walk-in booked")})</Text>
-
-                          <View style={styles.scheduleActions}>
-                            <View style={styles.column}>
-                              <TouchableOpacity style={styles.scheduleAction} onPress={() => {
-                                props.navigation.navigate("booktime", { scheduleid: item.id, serviceid: item.serviceid, serviceinfo: item.name })
-                              }}>
-                                <Text style={styles.scheduleActionHeader}>{tr.t("main.list.change")}</Text>
-                              </TouchableOpacity>
-                            </View>
-                            <View style={styles.column}>
-                              <TouchableOpacity style={styles.scheduleAction} onPress={() => doneTheService(index, item.id)}>
-                                <Text style={styles.scheduleActionHeader}>{tr.t("buttons.done")}</Text>
-                              </TouchableOpacity>
-                            </View>
+                          <View style={styles.column}>
+                            <TouchableOpacity style={styles.scheduleAction} onPress={() => doneTheService(index, item.id)}>
+                              <Text style={styles.scheduleActionHeader}>{tr.t("buttons.done")}</Text>
+                            </TouchableOpacity>
                           </View>
                         </View>
-                      ))}
-                    </View>
-
-                    {/*<FlatList
-                      style={{ flexDirection: 'row', flexWrap: 'wrap' }}
-                      showsVerticalScrollIndicator={false}
-                      data={appointments.list}
-                      renderItem={({ item, index }) => 
-                        <View key={item.key} style={styles.schedule}>
-                          <View style={{ flexDirection: 'row' }}>
-                            <TouchableOpacity style={styles.scheduleRemove} onPress={() => showScheduleOption(item.id, "list", index, "remove")}>
-                              <AntDesign name="close" size={wsize(5)}/>
-                            </TouchableOpacity>
-                            <Text style={[styles.scheduleHeader, { fontSize: wsize(4), fontWeight: 'bold' }]}>#{index + 1}</Text>
-                          </View>
-
-                          <Text style={styles.scheduleHeader}>{item.name}</Text>
-
-                          {item.image.name && (
-                            <View style={styles.scheduleImageHolder}>
-                              <Image 
-                                style={resizePhoto(item.image, wsize(20))} 
-                                source={{ uri: logo_url + item.image.name }}
-                              />
-                            </View>
-                          )}
-
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <View style={{ width: '50%' }}>
-                              <Text style={styles.scheduleHeader}>
-                                {tr.t("main.list.client") + ': ' + item.client.username}
-                                {item.worker && '\n' + tr.t("main.list.staff") + ': ' + item.worker.username}
-                              </Text>
-                            </View>
-                            <View style={{ width: '50%' }}>
-                              <Text style={[styles.scheduleHeader, { fontSize: wsize(4), fontWeight: 'bold' }]}>
-                                {displayTime(item.time)
-                                    .replace("today at", tr.t("headers.todayAt"))
-                                    .replace("tomorrow at", tr.t("headers.tomorrowAt"))
-                                }
-                              </Text>
-                            </View>
-                          </View>
-
-                          <Text style={[styles.scheduleHeader, { fontSize: wsize(3) }]}>({(item.type == "confirmed" ? "app booked" : "walk-in booked")})</Text>
-                          
-                          <View style={styles.scheduleActions}>
-                            <View style={styles.column}>
-                              <TouchableOpacity style={styles.scheduleAction} onPress={() => {
-                                props.navigation.navigate("booktime", { scheduleid: item.id, serviceid: item.serviceid, serviceinfo: item.name })
-                              }}>
-                                <Text style={styles.scheduleActionHeader}>{tr.t("main.list.change")}</Text>
-                              </TouchableOpacity>
-                            </View>
-                            <View style={styles.column}>
-                              <TouchableOpacity style={styles.scheduleAction} onPress={() => doneTheService(index, item.id)}>
-                                <Text style={styles.scheduleActionHeader}>{tr.t("buttons.done")}</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        </View>
-                      }
-                    />*/}
-                  </>
+                      </View>
+                    ))}
+                  </View>
                   :
                   <View style={styles.bodyResult}>
                     <Text style={styles.bodyResultHeader}>{tr.t("main.list.header")}</Text>
@@ -3512,15 +3449,14 @@ export default function Main(props) {
                       tableViewtype == "orders" ? 
                         <>
                           {tableOrders.length > 0 ?  
-                            <FlatList
-                              data={tableOrders}
-                              renderItem={({ item, index }) => 
-                                <View style={styles.tableOrder}>
-                                  <View style={[styles.column, { width: '18%' }]}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                              {tableOrders.map((item, index) => (
+                                <View key={item.key} style={styles.tableOrder}>
+                                  <View style={styles.column}>
                                     <Text style={styles.orderHeader}>Table{'\n'}#{item.id}</Text>
                                   </View>
 
-                                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '82%' }}>
+                                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                                     {item.orders.map(order => (
                                       <View key={order.key} style={[styles.order, { opacity: order.finish ? 0.3 : 1 }]}>
                                         <View style={styles.orderInfo}>
@@ -3573,11 +3509,9 @@ export default function Main(props) {
                                       </View>
                                     ))}
                                   </View>
-
-                                  
                                 </View>
-                              }
-                            />
+                              ))}
+                            </View>
                             :
                             <View style={styles.bodyResult}>
                               <Text style={styles.bodyResultHeader}>{tr.t("main.tableOrders.header")}</Text>
@@ -4002,145 +3936,6 @@ export default function Main(props) {
                           }}>
                             <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeStaffinfo")}</Text>
                           </TouchableOpacity>
-                        )}
-
-                        {userType == "owner" && (
-                          <>
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, show: false })
-                              props.navigation.navigate("menu", { userType })
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeMenu")}</Text>
-                            </TouchableOpacity>          
-
-                            {(locationType == "store" || locationType == "restaurant") && (
-                              <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                                getTheLogins()
-                                setEditinfo({ ...editInfo, show: true, type: 'login' })
-                                setShowmoreoptions({ ...showMoreoptions, infoType: 'login' })
-                              }}>
-                                <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeLogininfo")}</Text>
-                              </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, infoType: 'information' })
-                              setEditinfo({ ...editInfo, show: true, type: 'information', storeName, phonenumber })
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeBusinessinformation")}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, infoType: 'location' })
-                              setEditinfo({ ...editInfo, show: true, type: 'location' })
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeBusinesslocation")}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, infoType: 'logo' })
-                              setEditinfo({ ...editInfo, show: true, type: 'logo' })
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeBusinesslogo")}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, infoType: 'hours' })
-                              setEditinfo({ ...editInfo, show: true, type: 'hours' })
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeBusinesshours")}</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              AsyncStorage.removeItem("locationid")
-                              AsyncStorage.removeItem("locationtype")
-                              AsyncStorage.setItem("phase", "list")
-
-                              setShowmoreoptions({ ...showMoreoptions, show: false })
-
-                              setTimeout(function () {
-                                props.navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: "list" }]}));
-                              }, 1000)
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.moreBusinesses")}</Text>
-                            </TouchableOpacity>
-
-                            {(locationType == "hair" || locationType == "nail") && (
-                              <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                                AsyncStorage.setItem("phase", "walkin")
-
-                                setShowmoreoptions({ ...showMoreoptions, show: false })
-
-                                setTimeout(function () {
-                                  props.navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: "walkin" }]}));
-                                }, 1000)
-                              }}>
-                                <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.walkIn")}</Text>
-                              </TouchableOpacity>
-                            )}
-
-                            {(locationType == "hair" || locationType == "nail") && (
-                              <View style={styles.moreOptionsBox}>
-                                <Text style={styles.moreOptionsHeader}>{tr.t("main.hidden.showMoreoptions.getAppointmentsby.header")}</Text>
-
-                                <View style={styles.moreOptions}>
-                                  <TouchableOpacity style={[styles.moreOption, { backgroundColor: locationReceivetype == 'everyone' ? 'black' : 'white' }]} onPress={() => setTheReceiveType('everyone')}>
-                                    <Text style={[styles.moreOptionHeader, { color: locationReceivetype == 'everyone' ? 'white' : 'black' }]}>{tr.t("main.hidden.showMoreoptions.getAppointmentsby.both")}</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={[styles.moreOption, { backgroundColor: locationReceivetype == 'owner' ? 'black' : 'white' }]} onPress={() => setTheReceiveType('owner')}>
-                                    <Text style={[styles.moreOptionHeader, { color: locationReceivetype == 'owner' ? 'white' : 'black' }]}>{tr.t("main.hidden.showMoreoptions.getAppointmentsby.owner")}</Text>
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                            )}
-
-                            {locationType == "restaurant" && (
-                              <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                                setShowmoreoptions({ ...showMoreoptions, show: false })
-                                props.navigation.navigate("tables")
-                              }}>
-                                <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.editTables")}</Text>
-                              </TouchableOpacity>
-                            )}
-
-                            <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                              setShowmoreoptions({ ...showMoreoptions, show: false })
-
-                              if (locationType == "restaurant") {
-                                props.navigation.navigate("restaurantincomerecords")
-                              } else {
-                                props.navigation.navigate("salonincomerecords")
-                              }
-                            }}>
-                              <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.paymentRecords")}</Text>
-                            </TouchableOpacity>
-                          </>
-                        )}
-
-                        {locationType == "restaurant" && (
-                          <View style={styles.moreOptionsBox}>
-                            <Text style={styles.moreOptionsHeader}>{tr.t("main.hidden.showMoreoptions.switchAccount.header")}</Text>
-
-                            <View style={styles.moreOptions}>
-                              {userType != 'kitchen' && (
-                                <TouchableOpacity style={styles.moreOption} onPress={() => switchTheAccount('kitchen')}>
-                                  <Text style={styles.moreOptionHeader}>{tr.t("main.hidden.showMoreoptions.switchAccount.kitchen")}</Text>
-                                </TouchableOpacity>
-                              )}
-
-                              {userType != 'owner' && (
-                                <TouchableOpacity style={styles.moreOption} onPress={() => switchTheAccount('owner')}>
-                                  <Text style={styles.moreOptionHeader}>{tr.t("main.hidden.showMoreoptions.switchAccount.owner")}</Text>
-                                </TouchableOpacity>
-                              )}
-                              
-                              {userType != 'orderer' && (
-                                <TouchableOpacity style={styles.moreOption} onPress={() => switchTheAccount('orderer')}>
-                                  <Text style={styles.moreOptionHeader}>{tr.t("main.hidden.showMoreoptions.switchAccount.tableOrderers")}</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          </View>
                         )}
 
                         <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
@@ -6348,7 +6143,7 @@ const styles = StyleSheet.create({
   chartAction: { borderRadius: 5, borderStyle: 'solid', borderWidth: 2, margin: 5, padding: 5, width: '40%' },
   chartActionHeader: { textAlign: 'center' },
   chartRow: { flexDirection: 'row', width: '100%' },
-  chartTimeHeader: { fontSize: wsize(3), fontWeight: 'bold', textAlign: 'center' },
+  chartTimeHeader: { fontSize: wsize(5), fontWeight: 'bold', textAlign: 'center' },
   chartWorker: { alignItems: 'center', borderColor: 'grey', borderStyle: 'solid', borderWidth: 1, flexDirection: 'row', justifyContent: 'space-around' },
   chartWorkerHeader: { fontSize: wsize(6), textAlign: 'center' },
   chartWorkerProfile: { borderRadius: 20, height: 40, overflow: 'hidden', width: 40 },

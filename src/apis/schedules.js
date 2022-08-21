@@ -78,13 +78,6 @@ export const blockTime = data => {
   )
 }
 
-export const getOrders = data => {
-	return axios.post(
-		`${beginUrl}get_orders`,
-		data
-	)
-}
-
 export const doneService = id => {
   return axios.get(`${beginUrl}done_service/${id}`)
 }

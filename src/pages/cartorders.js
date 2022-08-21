@@ -10,8 +10,7 @@ import Constants from 'expo-constants';
 import { resizePhoto } from 'geottuse-tools';
 import { tr } from '../../assets/translate'
 import { socket, logo_url } from '../../assets/info'
-import { getOrders } from '../apis/schedules'
-import { orderDone, setWaitTime } from '../apis/carts'
+import { orderDone, setWaitTime, getOrders } from '../apis/carts'
 
 import AntDesign from 'react-native-vector-icons/AntDesign'
 
@@ -22,7 +21,7 @@ const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
 
 export default function Cartorders(props) {
-	const { userid, type, ordernumber, refetch } = props.route.params
+	const { userid, type, ordernumber } = props.route.params
 
   const [language, setLanguage] = useState(null)
 	const [ownerId, setOwnerid] = useState(null)
@@ -83,8 +82,6 @@ export default function Cartorders(props) {
           setLoading(false)
 
           socket.emit("socket/orderDone", data, () => {
-            if (refetch) refetch()
-
             props.navigation.dispatch(
               CommonActions.reset({
                 index: 0,
@@ -153,26 +150,55 @@ export default function Cartorders(props) {
 					renderItem={({ item, index }) => 
 						<View style={styles.item} key={item.key}>
 							<View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-								<View style={styles.itemImageHolder}>
-                  <Image 
-                    source={item.image.name ? { uri: logo_url + item.image.name } : require("../../assets/noimage.jpeg")} 
-                    style={resizePhoto(item.image, wsize(30))}
-                  />
-                </View>
+  							{item.image.name && (
+                  <View style={styles.itemImageHolder}>
+                    <Image 
+                      source={{ uri: logo_url + item.image.name }} 
+                      style={resizePhoto(item.image, wsize(30))}
+                    />
+                  </View>
+                )}
 
 								<View style={styles.itemInfos}>
 									<Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.header}><Text style={{ fontWeight: 'bold' }}>Quantity:</Text> {item.quantity}</Text>
                   {item.cost && <Text style={styles.header}><Text style={{ fontWeight: 'bold' }}>Total cost:</Text> ${item.cost.toFixed(2)}</Text>}
 
-									{item.sizes.map((size, sizeindex) => (
-										size.selected && ( 
-											<Text key={size.key} style={styles.itemInfo}>
+									{item.sizes.map((info, index) => (
+										info.selected && ( 
+											<Text key={info.key} style={styles.itemInfo}>
 												<Text style={{ fontWeight: 'bold' }}>Size: </Text>
-												<Text>{size.name}</Text>
+												<Text>{info.name}</Text>
 											</Text>
 									 )
 									))}
+
+                  {item.quantities.map((info, index) => (
+                    info.selected && (
+                      <Text key={info.key} style={styles.itemInfo}>
+                        <Text style={{ fontWeight: 'bold' }}>Quantity: </Text>
+                        <Text>{info.input}</Text>
+                      </Text>
+                    )
+                  ))}
+
+                  {item.percents.map((info, index) => (
+                    info.selected && (
+                      <Text key={info.key} style={styles.itemInfo}>
+                        <Text style={{ fontWeight: 'bold' }}>Percent: </Text>
+                        <Text>{info.input}</Text>
+                      </Text>
+                    )
+                  ))}
+
+                  {item.extras.map((info, index) => (
+                    info.selected && (
+                      <Text key={info.key} style={styles.itemInfo}>
+                        <Text style={{ fontWeight: 'bold' }}>Extra: </Text>
+                        <Text>{info.input}</Text>
+                      </Text>
+                    )
+                  ))}
 								</View>
 							</View>
 
@@ -212,9 +238,7 @@ export default function Cartorders(props) {
 								<Text style={styles.requiredHeader}>{tr.t("orders.hidden.noOrders.header")}</Text>
 
 								<View style={styles.requiredActions}>
-									<TouchableOpacity style={styles.requiredAction} onPress={() => {
-										if (refetch) refetch()
-											
+									<TouchableOpacity style={styles.requiredAction} onPress={() => {											
 										setShownoorders(false)
 										props.navigation.goBack()
 									}}>
