@@ -18,8 +18,6 @@ import Booktime from './src/pages/booktime'
 
 import Cartorders from './src/pages/cartorders'
 
-import Menu from './src/pages/menu'
-
 const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
 

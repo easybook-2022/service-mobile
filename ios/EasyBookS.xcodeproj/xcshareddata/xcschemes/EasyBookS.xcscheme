@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "EasyBookR.app"
-               BlueprintName = "EasyBookR"
-               ReferencedContainer = "container:EasyBookR.xcodeproj">
+               BuildableName = "EasyBookS.app"
+               BlueprintName = "EasyBookS"
+               ReferencedContainer = "container:EasyBookS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "EasyBookRTests.xctest"
-               BlueprintName = "EasyBookRTests"
-               ReferencedContainer = "container:EasyBookR.xcodeproj">
+               BuildableName = "EasyBookSTests.xctest"
+               BlueprintName = "EasyBookSTests"
+               ReferencedContainer = "container:EasyBookS.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "EasyBookR.app"
-            BlueprintName = "EasyBookR"
-            ReferencedContainer = "container:EasyBookR.xcodeproj">
+            BuildableName = "EasyBookS.app"
+            BlueprintName = "EasyBookS"
+            ReferencedContainer = "container:EasyBookS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "EasyBookR.app"
-            BlueprintName = "EasyBookR"
-            ReferencedContainer = "container:EasyBookR.xcodeproj">
+            BuildableName = "EasyBookS.app"
+            BlueprintName = "EasyBookS"
+            ReferencedContainer = "container:EasyBookS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

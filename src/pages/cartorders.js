@@ -160,7 +160,7 @@ export default function Cartorders(props) {
                 )}
 
 								<View style={styles.itemInfos}>
-									<Text style={styles.itemName}>{item.name}</Text>
+									<Text style={styles.itemName}>#{item.name}</Text>
                   <Text style={styles.header}><Text style={{ fontWeight: 'bold' }}>Quantity:</Text> {item.quantity}</Text>
                   {item.cost && <Text style={styles.header}><Text style={{ fontWeight: 'bold' }}>Total cost:</Text> ${item.cost.toFixed(2)}</Text>}
 
