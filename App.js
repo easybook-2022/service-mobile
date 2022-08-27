@@ -47,7 +47,7 @@ export default function App() {
         setRoute("auth")
       }
     }
-
+    
     retrieveId()
     
     if (route != null && fontLoaded) {

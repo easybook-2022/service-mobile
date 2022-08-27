@@ -17,9 +17,8 @@ import { tr } from '../../assets/translate'
 import { loginInfo, ownerSigninInfo, socket, logo_url, timeControl, tableUrl } from '../../assets/info'
 import { getId, displayTime, resizePhoto, displayPhonenumber } from 'geottuse-tools'
 import { 
-  updateNotificationToken, verifyUser, updateLogins, addOwner, updateOwner, deleteOwner, getStylistInfo, 
-  getOtherWorkers, getAccounts, getOwnerInfo, logoutUser, getWorkersTime, getAllWorkersTime, getWorkersHour, 
-  switchAccount, verifySwitchAccount
+  updateNotificationToken, updateOwner, getOtherWorkers, getAccounts, logoutUser, getWorkersTime, getAllWorkersTime, getWorkersHour, 
+  switchAccount
 } from '../apis/owners'
 import { getTables, getTableOrders, finishOrder, viewPayment, finishDining, getQrCode, orderMeal, viewTableOrders, addTable, removeTable, getTableBills, getOrderingTables } from '../apis/dining_tables'
 import { getLocationProfile, getLocationHours, updateInformation, getLogins, updateAddress, updateLogo, setReceiveType, getDayHours } from '../apis/locations'
@@ -111,19 +110,12 @@ export default function Main(props) {
     errorMsg: ''
   })
 
-  const [locationInfo, setLocationinfo] = useState('')
-  const [locationCoords, setLocationcoords] = useState({ longitude: null, latitude: null, longitudeDelta: null, latitudeDelta: null })
   const [storeName, setStorename] = useState('')
   const [phonenumber, setPhonenumber] = useState('')
   const [logo, setLogo] = useState({ uri: '', name: '', size: { width: 0, height: 0 }, loading: false })
   const [locationReceivetype, setLocationreceivetype] = useState('')
 
   const [locationHours, setLocationhours] = useState([])
-  const [deleteOwnerbox, setDeleteownerbox] = useState({
-    show: false,
-    id: -1, username: '', 
-    profile: { name: "", width: 0, height: 0 }, numWorkingdays: 0
-  })
   const [logins, setLogins] = useState({ 
     owners: [], 
     type: '',
@@ -292,8 +284,7 @@ export default function Main(props) {
                 }
               }
             } else {
-              //getListAppointments()
-              getTheWorkersHour(true)
+              getListAppointments()
             }
           })
         }
@@ -1784,7 +1775,7 @@ export default function Main(props) {
         socket.emit("socket/business/login", ownerId, () => setShowdisabledscreen(false))
       }
     })
-    socket.io.on("close", () => ownerId != null ? setShowdisabledscreen(true) : {})
+    socket.io.on("close", () => ownerId != null ? setShowdisabledscreen(true) : setShowdisabledscreen(false))
 
     return () => {
       socket.off("updateSchedules")
@@ -1836,57 +1827,7 @@ export default function Main(props) {
         }
       })
   }
-  const verifyLogin = () => {
-    const { cellnumber } = logins.info
 
-    verifyUser(cellnumber)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          const { verifycode } = res
-
-          setLogins({ ...logins, info: { ...logins.info, noAccount: true, verifyCode: verifycode }})
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg } = err.response.data
-
-          setLogins({ ...logins, errorMsg: errormsg })
-        }
-      })
-  }
-
-  const verify = () => {
-    setAccountform({ ...accountForm, loading: true })
-
-    const { cellnumber } = accountForm
-
-    verifyUser(cellnumber)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          const { verifycode } = res
-
-          setAccountform({ ...accountForm, verifyCode: verifycode, errorMsg: "", loading: false })
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg } = err.response.data
-
-          setAccountform({ ...accountForm, errorMsg: errormsg, loading: false })
-        }
-      })
-  }
   const getAllAccounts = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
 
@@ -1949,56 +1890,6 @@ export default function Main(props) {
         return
       }
     }
-  }
-  const updateTheAddress = async() => {
-    const { longitude, latitude } = locationCoords
-
-    const id = await AsyncStorage.getItem("locationid")
-    const data = { id, longitude, latitude }
-
-    updateAddress(data)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          const { id } = res
-
-          setShowmoreoptions({ ...showMoreoptions, infoType: '' })
-          setEditinfo({ ...editInfo, show: false, type: '', loading: false })
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg, status } = err.response.data
-
-          setEditinfo({ ...editInfo, errorMsg: errormsg, loading: false })
-        }
-      })
-  }
-  const updateTheLogo = async() => {
-    const id = await AsyncStorage.getItem("locationid")
-    const data = { id, logo }
-
-    updateLogo(data)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          setShowmoreoptions({ ...showMoreoptions, infoType: '' })
-          setEditinfo({ ...editInfo, show: false, type: '', loading: false })
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg, status } = err.response.data
-        }
-      })
   }
   const setWorkingTime = () => {
     const newAccountform = {...accountForm}
@@ -2284,64 +2175,6 @@ export default function Main(props) {
         }
       })
   }
-  const deleteTheOwner = id => {
-    if (!deleteOwnerbox.show) {
-      getStylistInfo(id)
-        .then((res) => {
-          if (res.status == 200) {
-            return res.data
-          }
-        })
-        .then((res) => {
-          if (res) {
-            const { username, profile, days } = res
-
-            setDeleteownerbox({
-              ...deleteOwnerbox,
-              show: true,
-              id, username, 
-              profile,
-              numWorkingdays: Object.keys(days).length
-            })
-            setEditinfo({ ...editInfo, show: false })
-          }
-        })
-        .catch((err) => {
-          if (err.response && err.response.status == 400) {
-            const { errormsg, status } = err.response.data
-          }
-        })
-    } else {
-      const { id } = deleteOwnerbox
-
-      deleteOwner(id)
-        .then((res) => {
-          if (res.status == 200) {
-            return res.data
-          }
-        })
-        .then((res) => {
-          if (res) {
-            const newAccountholders = [...accountHolders]
-
-            newAccountholders.forEach(function (info, index) {
-              if (info.id == id) {
-                newAccountholders.splice(index, 1)
-              }
-            })
-
-            setAccountholders(newAccountholders)
-            setEditinfo({ ...editInfo, show: true })
-            setDeleteownerbox({ ...deleteOwnerbox, show: false })
-          }
-        })
-        .catch((err) => {
-          if (err.response && err.response.status == 400) {
-            const { errormsg, status } = err.response.data
-          }
-        })
-    }
-  }
   const cancelTheShift = async(day) => {
     const newWorkerhours = [...accountForm.workerHours]
 
@@ -2392,50 +2225,6 @@ export default function Main(props) {
 
     setAccountform({...accountForm, workerHours: newWorkerhours })
     setGetworkersbox({ ...getWorkersbox, show: false })
-  }
-  const updateTheLogins = async() => {
-    const { type, info, owners } = logins
-    const { id, cellnumber, verified, noAccount, currentPassword, newPassword, confirmPassword, userType } = info
-    let data = { type, id }
-
-    switch (type) {
-      case "all":
-        const locationid = await AsyncStorage.getItem("locationid")
-
-        data = { ...data, locationid, cellnumber, newPassword, confirmPassword, userType }
-
-        break;
-      case "cellnumber":
-        data = { ...data, cellnumber }
-
-        break;
-      case "password":
-        data = { ...data, currentPassword, newPassword, confirmPassword }
-
-        break;
-      case "usertype":
-        data = { ...data, userType }
-      default:
-    }
-
-    updateLogins(data)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          getTheLogins()
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg, status } = err.response.data
-
-          setLogins({ ...logins, errorMsg: errormsg })
-        }
-      })
   }
   const jsonDateToUnix = date => {
     return Date.parse(date["month"] + " " + date["date"] + ", " + date["year"] + " " + date["hour"] + ":" + date["minute"])
@@ -3442,178 +3231,6 @@ export default function Main(props) {
                               </View>
                             )}
 
-                            {editInfo.type == 'information' && (
-                              <>
-                                <View style={styles.inputsBox}>
-                                  <View style={styles.inputContainer}>
-                                    <Text style={styles.inputHeader}>{tr.t("main.editingInformation.name")}:</Text>
-                                    <TextInput style={styles.input} onChangeText={(storeName) => setEditinfo({ ...editInfo, storeName })} value={editInfo.storeName} autoCorrect={false}/>
-                                  </View>
-                                  <View style={styles.inputContainer}>
-                                    <Text style={styles.inputHeader}>{tr.t("main.editingInformation.phonenumber")}:</Text>
-                                    <TextInput style={styles.input} onChangeText={(num) => setEditinfo({ ...editInfo, phonenumber: displayPhonenumber(phonenumber, num, () => Keyboard.dismiss()) })} value={editInfo.phonenumber} keyboardType="numeric" autoCorrect={false}/>
-                                  </View>
-                                </View>
-
-                                <Text style={styles.errorMsg}>{editInfo.errorMsg}</Text>
-
-                                <TouchableOpacity style={[styles.updateButton, { opacity: editInfo.loading ? 0.3 : 1 }]} disabled={editInfo.loading} onPress={() => updateTheInformation()}>
-                                  <Text style={styles.updateButtonHeader}>{tr.t("buttons.update")}</Text>
-                                </TouchableOpacity>
-                              </>
-                            )}
-
-                            {editInfo.type == 'hours' && (
-                              <ScrollView style={{ height: '100%', width: '100%' }}>
-                                <Text style={[styles.header, { fontSize: wsize(6), textAlign: 'center' }]}>{tr.t("main.editingHours.header")}</Text>
-
-                                {editInfo.locationHours.map((info, index) => (
-                                  <View key={index} style={styles.workerHour}>
-                                    {info.close == false ? 
-                                      <>
-                                        <View style={{ opacity: info.close ? 0.1 : 1, width: '100%' }}>
-                                          <Text style={styles.workerHourHeader}>{
-                                            language == "chinese" ? 
-                                              tr.t("main.editingHours.openHeader." + info.header)
-                                              :
-                                              tr.t("main.editingHours.openHeader").replace("{day}", tr.t("days." + info.header))
-                                          }</Text>
-                                          <View style={styles.timeSelectionContainer}>
-                                            <View style={styles.timeSelection}>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "hour", "up", true)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <TextInput style={styles.selectionHeader} onChangeText={(hour) => {
-                                                  const newLocationhours = [...locationHours]
-
-                                                  newLocationhours[index].opentime["hour"] = hour.toString()
-
-                                                  setLocationhours(newLocationhours)
-                                                }} keyboardType="numeric" maxLength={2} value={info.opentime.hour}/>
-                                                <TouchableOpacity onPress={() => updateTime(index, "hour", "down", true)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                              <View style={styles.column}>
-                                                <Text style={styles.selectionDiv}>:</Text>
-                                              </View>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "minute", "up", true)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <TextInput style={styles.selectionHeader} onChangeText={(minute) => {
-                                                  const newLocationhours = [...locationHours]
-
-                                                  newLocationhours[index].opentime["minute"] = minute.toString()
-
-                                                  setLocationhours(newLocationhours)
-                                                }} keyboardType="numeric" maxLength={2} value={info.opentime.minute}/>
-                                                <TouchableOpacity onPress={() => updateTime(index, "minute", "down", true)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "period", "up", true)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <Text style={styles.selectionHeader}>{info.opentime.period}</Text>
-                                                <TouchableOpacity onPress={() => updateTime(index, "period", "down", true)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                            </View>
-                                            <View style={styles.timeSelectionColumn}>
-                                              <Text style={styles.timeSelectionHeader}>To</Text>
-                                            </View>
-                                            <View style={styles.timeSelection}>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "hour", "up", false)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <TextInput style={styles.selectionHeader} onChangeText={(hour) => {
-                                                  const newLocationhours = [...locationHours]
-
-                                                  newLocationhours[index].closetime["hour"] = hour.toString()
-
-                                                  setLocationhours(newLocationhours)
-                                                }} keyboardType="numeric" maxLength={2} value={info.closetime.hour}/>
-                                                <TouchableOpacity onPress={() => updateTime(index, "hour", "down", false)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                              <View style={styles.column}>
-                                                <Text style={styles.selectionDiv}>:</Text>
-                                              </View>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "minute", "up", false)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <TextInput style={styles.selectionHeader} onChangeText={(minute) => {
-                                                  const newLocationhours = [...locationHours]
-
-                                                  newLocationhours[index].closetime["minute"] = minute.toString()
-
-                                                  setLocationhours(newLocationhours)
-                                                }} keyboardType="numeric" maxLength={2} value={info.closetime.minute}/>
-                                                <TouchableOpacity onPress={() => updateTime(index, "minute", "down", false)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                              <View style={styles.selection}>
-                                                <TouchableOpacity onPress={() => updateTime(index, "period", "up", false)}>
-                                                  <AntDesign name="up" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                                <Text style={styles.selectionHeader}>{info.closetime.period}</Text>
-                                                <TouchableOpacity onPress={() => updateTime(index, "period", "down", false)}>
-                                                  <AntDesign name="down" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                            </View>
-                                          </View>
-                                        </View>
-                                        <TouchableOpacity style={styles.workerTouch} onPress={() => {
-                                          const newLocationhours = [...locationHours]
-
-                                          newLocationhours[index].close = true
-
-                                          setLocationhours(newLocationhours)
-                                        }}>
-                                          <Text style={styles.workerTouchHeader}>{tr.t("main.editingHours.changeToNotOpen")}</Text>
-                                        </TouchableOpacity>
-                                      </>
-                                      :
-                                      <>
-                                        <Text style={styles.workerHourHeader}>{tr.t("main.editingHours.notOpen").replace("{day}", tr.t("days." + info.header))}</Text>
-
-                                        <TouchableOpacity style={styles.workerTouch} onPress={() => {
-                                          const newLocationhours = [...locationHours]
-
-                                          newLocationhours[index].close = false
-
-                                          setLocationhours(newLocationhours)
-                                        }}>
-                                          <Text style={styles.workerTouchHeader}>{tr.t("main.editingHours.changeToOpen")}</Text>
-                                        </TouchableOpacity>
-                                      </>
-                                    }
-                                  </View>
-                                ))}
-
-                                <View style={styles.updateButtons}>
-                                  <TouchableOpacity style={styles.updateButton} disabled={editInfo.loading} onPress={() => {
-                                    setShowmoreoptions({ ...showMoreoptions, infoType: '' })
-                                    setEditinfo({ ...editInfo, show: false, type: '' })
-                                  }}>
-                                    <Text style={styles.updateButtonHeader}>{tr.t("buttons.cancel")}</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={styles.updateButton} disabled={editInfo.loading} onPress={() => updateTheLocationHours()}>
-                                    <Text style={styles.updateButtonHeader}>{tr.t("buttons.update")}</Text>
-                                  </TouchableOpacity>
-                                </View>
-                              </ScrollView>
-                            )}
-
                             {editInfo.type == 'users' && (
                               <ScrollView showsVerticalScrollIndicator={false}>
                                 <View style={styles.accountHolders}>
@@ -3710,211 +3327,6 @@ export default function Main(props) {
                                   ))}
                                 </View>
                               </ScrollView>
-                            )}
-
-                            {editInfo.type == 'login' && (
-                              <View style={{ alignItems: 'center', width: '100%' }}>
-                                {!logins.type ? 
-                                  <>
-                                    <TouchableOpacity style={styles.loginsAdd} onPress={() => setLogins({ ...logins, type: "all" })}>
-                                      <Text style={styles.loginsAddHeader}>Add new login</Text>
-                                    </TouchableOpacity>
-
-                                    <FlatList
-                                      data={logins.owners}
-                                      style={{ height: '80%', width: '100%' }}
-                                      renderItem={({ item, index }) => 
-                                        <View key={item.key} style={styles.login}>
-                                          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-                                            <Text style={styles.loginIndex}>#{index + 1}</Text>
-                                            <View style={styles.column}><Text style={styles.loginHeader}>{displayPhonenumber('', item.cellnumber, () => {})}</Text></View>
-                                          </View>
-
-                                          <View style={{ alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.2)', width: '100%' }}>
-                                            <View style={styles.column}>
-                                              <TouchableOpacity style={styles.loginChange} onPress={() => setLogins({ ...logins, type: 'usertype', info: {...logins.info, id: item.id, userType: item.userType }})}>
-                                                <Text style={styles.loginChangeHeader}>Change User Type{'\n(' + item.userType + ')'}</Text>
-                                              </TouchableOpacity>
-                                            </View>
-
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 5 }}>
-                                              <View style={[styles.column, { marginHorizontal: '5%' }]}>
-                                                <TouchableOpacity style={styles.loginChange} onPress={() => setLogins({ ...logins, type: 'cellnumber', info: {...logins.info, id: item.id, noAccount: false, verifyCode: "", verified: false }})}>
-                                                  <Text style={styles.loginChangeHeader}>Change number</Text>
-                                                </TouchableOpacity>
-                                              </View>
-
-                                              <View style={[styles.column, { marginHorizontal: '5%' }]}>
-                                                <TouchableOpacity style={styles.loginChange} onPress={() => setLogins({ ...logins, type: 'password', info: {...logins.info, id: item.id }})}>
-                                                  <Text style={styles.loginChangeHeader}>Change Password</Text>
-                                                </TouchableOpacity>
-                                              </View>
-                                            </View>
-
-                                            <View style={styles.column}>
-                                              <TouchableOpacity style={styles.loginRemove} onPress={() => deleteTheLogin(item.id)}>
-                                                <AntDesign name="closecircleo" size={wsize(10)}/>
-                                              </TouchableOpacity>
-                                            </View>
-                                          </View>
-                                        </View>
-                                      }
-                                    />
-                                  </>
-                                  :
-                                  logins.type == "all" ? 
-                                    <>
-                                      {!logins.info.noAccount ? 
-                                        <View style={styles.inputContainer}>
-                                          <Text style={styles.inputHeader}>{tr.t("main.editingInformation.cellnumber").replace(" your", "")}:</Text>
-                                          <TextInput style={styles.input} onChangeText={(num) => setLogins({ ...logins, info: { ...logins.info, cellnumber: displayPhonenumber(logins.info.cellnumber, num, () => Keyboard.dismiss()) }})} value={logins.info.cellnumber} autoCorrect={false} keyboardType="numeric"/>
-                                        </View>
-                                        :
-                                        !logins.info.verified ? 
-                                          <View style={styles.inputContainer}>
-                                            <Text style={styles.inputHeader}>{tr.t("main.editingInformation.verifyCode")}:</Text>
-                                            <TextInput style={styles.input} onChangeText={(verifyCode) => {
-                                              if (verifyCode.length == 6) {
-                                                Keyboard.dismiss()
-
-                                                if (logins.info.verifyCode == verifyCode || verifyCode == '111111') {
-                                                  setLogins({ ...logins, info: { ...logins.info, verified: true }, errorMsg: "" })
-                                                } else {
-                                                  setLogins({ ...logins, errorMsg: "The code is wrong" })
-                                                }
-                                              } else {
-                                                setLogins({ ...logins, errorMsg: "" })
-                                              }
-                                            }} autoCorrect={false} keyboardType="numeric"/>
-                                          </View>
-                                          :
-                                          <>
-                                            <View style={styles.inputContainer}>
-                                              <Text style={styles.inputHeader}>{tr.t("main.editingInformation.newPassword")}:</Text>
-                                              <TextInput style={styles.input} onChangeText={(newPassword) => setLogins({ ...logins, info: { ...logins.info, newPassword }})} secureTextEntry value={logins.info.newPassword} autoCorrect={false}/>
-                                            </View>
-                                            <View style={styles.inputContainer}>
-                                              <Text style={styles.inputHeader}>{tr.t("main.editingInformation.confirmPassword").replace(" your", "")}:</Text>
-                                              <TextInput style={styles.input} onChangeText={(confirmPassword) => setLogins({ ...logins, info: { ...logins.info, confirmPassword }})} secureTextEntry value={logins.info.confirmPassword} autoCorrect={false}/>
-                                            </View>
-
-                                            <View style={styles.userType}>
-                                              <Text style={styles.userTypeHeader}>User type</Text>
-                                              <View style={styles.userTypeActions}>
-                                                <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "owner" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "owner" }})}>
-                                                  <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "owner" ? "white": "black" }]}>Owner</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "kitchen" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "kitchen" }})}>
-                                                  <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "kitchen" ? "white": "black" }]}>Kitchen</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "orderer" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "orderer" }})}>
-                                                  <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "orderer" ? "white": "black" }]}>Orderer</Text>
-                                                </TouchableOpacity>
-                                              </View>
-                                            </View>
-                                          </>
-                                      }
-
-                                      <Text style={styles.errorMsg}>{logins.errorMsg}</Text>
-
-                                      {!logins.info.noAccount ? 
-                                        <TouchableOpacity style={[styles.updateButton, { opacity: editInfo.loading ? 0.3 : 1 }]} onPress={() => verifyLogin()}>
-                                          <Text style={styles.updateButtonHeader}>Verify</Text>
-                                        </TouchableOpacity>
-                                        :
-                                        logins.info.verified && (
-                                          <TouchableOpacity style={[styles.updateButton, { opacity: editInfo.loading ? 0.3 : 1 }]} onPress={() => updateTheLogins()}>
-                                            <Text style={styles.updateButtonHeader}>Done</Text>
-                                          </TouchableOpacity>
-                                        )
-                                      }
-                                    </>
-                                    :
-                                    <>
-                                      {logins.type == "password" && (
-                                        <>
-                                          <View style={styles.inputContainer}>
-                                            <Text style={styles.inputHeader}>{tr.t("main.editingInformation.currentPassword")}:</Text>
-                                            <TextInput style={styles.input} onChangeText={(currentPassword) => setLogins({ ...logins, info: { ...logins.info, currentPassword }})} secureTextEntry value={logins.info.currentPassword} autoCorrect={false}/>
-                                          </View>
-                                          <View style={styles.inputContainer}>
-                                            <Text style={styles.inputHeader}>{tr.t("main.editingInformation.newPassword")}:</Text>
-                                            <TextInput style={styles.input} onChangeText={(newPassword) => setLogins({ ...logins, info: { ...logins.info, newPassword }})} secureTextEntry value={logins.info.newPassword} autoCorrect={false}/>
-                                          </View>
-                                          <View style={styles.inputContainer}>
-                                            <Text style={styles.inputHeader}>{tr.t("main.editingInformation.confirmPassword")}:</Text>
-                                            <TextInput style={styles.input} onChangeText={(confirmPassword) => setLogins({ ...logins, info: { ...logins.info, confirmPassword }})} secureTextEntry value={logins.info.confirmPassword} autoCorrect={false}/>
-                                          </View>
-                                        </>
-                                      )}
-
-                                      {logins.type == "cellnumber" && (
-                                        !logins.info.noAccount ? 
-                                          <View style={styles.inputContainer}>
-                                            <Text style={styles.inputHeader}>{tr.t("main.editingInformation.cellnumber").replace(" your", " new")}:</Text>
-                                            <TextInput style={styles.input} onChangeText={(num) => setLogins({ ...logins, info: { ...logins.info, cellnumber: displayPhonenumber(logins.info.cellnumber, num, () => Keyboard.dismiss()) }})} value={logins.info.cellnumber} autoCorrect={false} keyboardType="numeric"/>
-                                          </View>
-                                          :
-                                          !logins.info.verified && ( 
-                                            <View style={styles.inputContainer}>
-                                              <Text style={styles.inputHeader}>{tr.t("main.editingInformation.verifyCode")}:</Text>
-                                              <TextInput style={styles.input} onChangeText={(verifyCode) => {
-                                                if (verifyCode.length == 6) {
-                                                  Keyboard.dismiss()
-
-                                                  if (logins.info.verifyCode == verifyCode || verifyCode == '111111') {
-                                                    updateTheLogins()
-                                                  } else {
-                                                    setLogins({ ...logins, errorMsg: "The code is wrong" })
-                                                  }
-                                                } else {
-                                                  setLogins({ ...logins, errorMsg: "" })
-                                                }
-                                              }} autoCorrect={false} keyboardType="numeric"/>
-                                            </View>
-                                          )
-                                      )}
-
-                                      {logins.type == "usertype" && (
-                                        <View style={styles.userType}>
-                                          <Text style={styles.userTypeHeader}>User type</Text>
-                                          <View style={styles.userTypeActions}>
-                                            <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "owner" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "owner" }})}>
-                                              <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "owner" ? "white": "black" }]}>Owner</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "kitchen" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "kitchen" }})}>
-                                              <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "kitchen" ? "white": "black" }]}>Kitchen</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={[styles.userTypeAction, { backgroundColor: logins.info.userType == "orderer" ? "black" : "transparent" }]} onPress={() => setLogins({ ...logins, info: { ...logins.info, userType: "orderer" }})}>
-                                              <Text style={[styles.userTypeActionHeader, { color: logins.info.userType == "orderer" ? "white": "black" }]}>Orderer</Text>
-                                            </TouchableOpacity>
-                                          </View>
-                                        </View>
-                                      )}
-
-                                      <Text style={styles.errorMsg}>{logins.errorMsg}</Text>
-
-                                      {((logins.type == "cellnumber" && !logins.info.noAccount) || (logins.type && logins.type != "cellnumber")) && (
-                                        <TouchableOpacity style={[styles.updateButton, { opacity: editInfo.loading ? 0.3 : 1 }]} onPress={() => {
-                                          if (logins.type == "cellnumber") {
-                                            if (!logins.info.noAccount) {
-                                              verifyLogin()
-                                            }
-                                          } else {
-                                            updateTheLogins()
-                                          }
-                                        }}>
-                                          <Text style={styles.updateButtonHeader}>{
-                                            logins.type == "cellnumber" ? 
-                                              !logins.info.noAccount && "Verify"
-                                              :
-                                              "Done"
-                                          }</Text>
-                                        </TouchableOpacity>
-                                      )}
-                                    </>
-                                  }
-                              </View>
                             )}
                           </View>
                         </View>
@@ -4170,40 +3582,6 @@ export default function Main(props) {
                           )}
                         </>
                       )}
-                      {deleteOwnerbox.show && (
-                        <View style={styles.deleteOwnerBox}>
-                          <View style={styles.deleteOwnerContainer}>
-                            <View style={{ alignItems: 'center' }}>
-                              <View style={styles.deleteOwnerProfile}>
-                                <Image 
-                                  style={resizePhoto(deleteOwnerbox.profile, wsize(40))} 
-                                  source={deleteOwnerbox.profile.name ? { uri: logo_url + deleteOwnerbox.profile.name } : require("../../assets/profilepicture.jpeg")}
-                                />
-                              </View>
-
-                              <Text style={styles.deleteOwnerHeader}>
-                                {deleteOwnerbox.username + '\n'}
-                                {tr.t("main.deleteStaff.header").replace("{numDays}", deleteOwnerbox.numWorkingdays)}
-                              </Text>
-                            </View>
-
-                            <View>
-                              <Text style={styles.deleteOwnerActionsHeader}>{tr.t("main.deleteStaff.delete")}</Text>
-                              <View style={styles.deleteOwnerActions}>
-                                <TouchableOpacity style={styles.deleteOwnerAction} onPress={() => {
-                                  setEditinfo({ ...editInfo, show: true })
-                                  setDeleteownerbox({ ...deleteOwnerbox, show: false })
-                                }}>
-                                  <Text style={styles.deleteOwnerActionHeader}>{tr.t("buttons.no")}</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.deleteOwnerAction} onPress={() => deleteTheOwner()}>
-                                  <Text style={styles.deleteOwnerActionHeader}>{tr.t("buttons.yes")}</Text>
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          </View>
-                        </View>
-                      )}
                     </>
                   }
                 </View>
@@ -4246,7 +3624,7 @@ export default function Main(props) {
                         )}
 
                         <View style={styles.paymentInfos}>
-                          <Text style={[styles.paymentInfoHeader, { marginBottom: 20 }]}>{item.name}</Text>
+                          <Text style={[styles.paymentInfoHeader, { marginBottom: 20 }]}>#{item.name}</Text>
 
                           {item.sizes.length > 0 && item.sizes.map(size => 
                             <Text 
@@ -4508,7 +3886,7 @@ export default function Main(props) {
                               </View>
                             )}
 
-                            <Text style={styles.showOrderHeader}>{item.name}</Text>
+                            <Text style={styles.showOrderHeader}>#{item.name}</Text>
                           </View>
                           <View style={{ width: '50%' }}>
                             {item.price ? 
@@ -4735,15 +4113,6 @@ const styles = StyleSheet.create({
   selectionDiv: { fontSize: wsize(6) },
   workerTouch: { backgroundColor: 'white', borderRadius: 5, borderStyle: 'solid', borderWidth: 2, margin: 5, padding: 5 },
   workerTouchHeader: { fontSize: wsize(7), textAlign: 'center' },
-  
-  deleteOwnerBox: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', flexDirection: 'column', height: '100%', justifyContent: 'space-around', width: '100%' },
-  deleteOwnerContainer: { alignItems: 'center', backgroundColor: 'white', flexDirection: 'column', height: '100%', justifyContent: 'space-between', paddingVertical: 20, width: '100%' },
-  deleteOwnerProfile: { borderRadius: wsize(40) / 2, height: wsize(40), overflow: 'hidden', width: wsize(40) },
-  deleteOwnerHeader: { fontSize: wsize(6), fontWeight: 'bold', marginVertical: 10, textAlign: 'center' },
-  deleteOwnerActionsHeader: { fontSize: wsize(6), fontWeight: 'bold', textAlign: 'center' },
-  deleteOwnerActions: { flexDirection: 'row', justifyContent: 'space-around' },
-  deleteOwnerAction: { borderRadius: 5, borderStyle: 'solid', borderWidth: 2, marginHorizontal: 5, padding: 10, width: wsize(30) },
-  deleteOwnerActionHeader: { fontSize: wsize(4), textAlign: 'center' },
 
   editInfoBox: { alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', flexDirection: 'column', height: '100%', justifyContent: 'space-around', width: '100%' },
   editInfoContainer: { alignItems: 'center', backgroundColor: 'white', height: '100%', width: '100%' },

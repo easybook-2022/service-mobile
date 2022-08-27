@@ -9,6 +9,7 @@ import { displayTime, resizePhoto } from 'geottuse-tools'
 import { tr } from '../../assets/translate'
 import { socket, logo_url } from '../../assets/info'
 
+import { getServiceInfo } from '../apis/services'
 import { getLocationHours } from '../apis/locations'
 import { getAllStylists, getStylistInfo, getAllWorkersTime, getWorkersHour, logoutUser } from '../apis/owners'
 import { getAppointmentInfo, salonChangeAppointment } from '../apis/schedules'
@@ -23,16 +24,16 @@ export default function Booktime(props) {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
   const pushtime = 1000 * (60 * 15)
 
-  const { scheduleid, serviceid, serviceinfo } = props.route.params
+  const { scheduleid, serviceid } = props.route.params
 
   const [language, setLanguage] = useState(null)
   const [clientInfo, setClientinfo] = useState({ id: -1, name: "" })
-  const [name, setName] = useState()
+  const [name, setName] = useState('')
   const [hoursInfo, setHoursinfo] = useState({})
   const [oldTime, setOldtime] = useState(0)
-  const [selectedDateinfo, setSelecteddateinfo] = useState({ month: '', year: 0, day: '', date: 0, hour: 0, minute: 0, select: false })
+  const [selectedDateinfo, setSelecteddateinfo] = useState({ month: '', year: 0, day: '', date: 0, hour: 0, minute: 0, update: 0, updateType: '' })
   const [bookedDateinfo, setBookeddateinfo] = useState({ month: '', year: 0, day: '', date: 0, blocked: [] })
-  const [selectedWorkerinfo, setSelectedworkerinfo] = useState({ id: -1, username: '', profile: { name: '', width: 0, height: 0 }, hours: {}, loading: false })
+  const [selectedWorkerinfo, setSelectedworkerinfo] = useState({ id: -1, username: '', profile: { name: '', width: 0, height: 0 }, hours: {}, loading: false, update: 0, updateType: '' })
   const [calendar, setCalendar] = useState({ firstDay: 0, numDays: 30, data: [
     { key: "day-row-0", row: [
         { key: "day-0-0", num: 0, passed: false }, { key: "day-0-1", num: 0, passed: false }, { key: "day-0-2", num: 0, passed: false }, 
@@ -134,6 +135,22 @@ export default function Booktime(props) {
         }
       })
   }
+  const getTheServiceInfo = () => {
+    getServiceInfo(serviceid)
+      .then((res) => {
+        if (res.status == 200) {
+          return res.data
+        }
+      })
+      .then((res) => {
+        setName(res.serviceInfo.name)
+      })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
+  }
   const getCalendar = (month, year) => {
     let currTime = new Date(), currDate = 0, currDay = ''
     let firstDay = (new Date(year, month)).getDay(), numDays = 32 - new Date(year, month, 32).getDate(), daynum = 1
@@ -142,7 +159,7 @@ export default function Booktime(props) {
       months[currTime.getMonth()] + " " + 
       currTime.getDate() + " " + 
       currTime.getFullYear()
-    ), timeStr = ""
+    ), timeStr = "", newMonth, newDate
 
     data.forEach(function (info, rowindex) {
       info.row.forEach(function (day, dayindex) {
@@ -195,9 +212,10 @@ export default function Booktime(props) {
 
           if (!day.noservice) {
             if (selectedWorkerinfo.id > -1 && days[dayindex].substr(0, 3) in selectedWorkerinfo.hours) {
-              let timeInfo = selectedWorkerinfo.hours[days[dayindex].substr(0, 3)]
+              let { start, end } = selectedWorkerinfo.hours[days[dayindex].substr(0, 3)]
 
-              day.noservice = !(Date.now() < Date.parse(timeStr + " " + timeInfo.end))
+              day.noservice = !(Date.now() < Date.parse(timeStr + " " + end))
+              day.passed = Date.now() > Date.parse(timeStr + " " + end)
             } else {
               let timeInfos = allWorkerstime[days[dayindex].substr(0, 3)]
 
@@ -229,13 +247,7 @@ export default function Booktime(props) {
             if (now < closedtime) {
               if (selectedWorkerinfo.id > -1) {
                 if (currDay in selectedWorkerinfo.hours) {
-                  const { start, end } = selectedWorkerinfo.hours[currDay]
-
-                  finishworktime = Date.parse(timeStr + " " + end)
-
-                  if (now < finishworktime) { // before stylist finishes work
-                    currDate = day.num
-                  }
+                  currDate = day.num
                 }
               } else {
                 currDate = day.num
@@ -250,14 +262,18 @@ export default function Booktime(props) {
       })
     })
 
-    setSelecteddateinfo({ 
-      ...selectedDateinfo, 
-      month: months[month], day: currDay, 
-      date: bookedDateinfo.date == 0 ? 
+    newMonth = months[month]
+    newDate = bookedDateinfo.date == 0 ? 
         currDate 
         : 
-        bookedDateinfo.date < currDate ? currDate : bookedDateinfo.date,
-      year
+        bookedDateinfo.date < currDate ? currDate : bookedDateinfo.date
+
+    setSelecteddateinfo({ 
+      ...selectedDateinfo, 
+      month: newMonth, day: currDay, 
+      date: newDate, year,
+      update: scheduleid ? selectedDateinfo.update + 1 : selectedWorkerinfo.update,
+      updateType: scheduleid ? 'time' : selectedDateinfo.updateType
     })
     setCalendar({ ...calendar, data, firstDay, numDays })
   }
@@ -363,7 +379,7 @@ export default function Booktime(props) {
         }
       })
   }
-  const selectWorker = (id, close = false) => {
+  const selectWorker = (id, showCalendar) => {
     getStylistInfo(id)
       .then((res) => {
         if (res.status == 200) {
@@ -372,13 +388,15 @@ export default function Booktime(props) {
       })
       .then((res) => {
         if (res) {
-          setSelectedworkerinfo({ ...selectedWorkerinfo, id, username: res.username, profile: res.profile, hours: res.days })
-          setSelecteddateinfo({ ...selectedDateinfo, select: true })
+          setSelectedworkerinfo({ 
+            ...selectedWorkerinfo, id, username: res.username, profile: res.profile, hours: res.days, 
+            update: selectedWorkerinfo.update + 1, updateType: 'calender' 
+          })
 
-          if (close) {
+          if (!scheduleid) {
             setStep(1)
           } else {
-            setStep(null)
+            setStep(showCalendar ? 1 : null)
           }
         }
       })
@@ -402,14 +420,14 @@ export default function Booktime(props) {
 
     getCalendar(month, year)
   }
-  const selectDate = () => {
+  const selectDate = update => {
     const { date, day, month, year } = selectedDateinfo, { blocked } = bookedDateinfo
     const { openHour, openMinute, closeHour, closeMinute } = hoursInfo[day]
     const numBlockTaken = scheduleid ? 1 + blocked.length : 0
-    let start = openHour + ":" + openMinute, end = closeHour + ":" + closeMinute, workerStart = 0, workerEnd = 0
+    let start = openHour + ":" + openMinute, end = closeHour + ":" + closeMinute
     let timeStr = month + " " + date + " " + year + " "
     let openDateStr = Date.parse(timeStr + start), closeDateStr = Date.parse(timeStr + end), calcDateStr = openDateStr
-    let currenttime = Date.now(), newTimes = [], timesRow = [], timesNum = 0
+    let currenttime = Date.now(), newTimes = [], timesRow = [], timesNum = 0, workerStart = 0, workerEnd = 0
 
     while (calcDateStr <= (closeDateStr - pushtime)) {
       calcDateStr += pushtime
@@ -449,46 +467,39 @@ export default function Booktime(props) {
       let availableService = false, workerIds = []
 
       if (selectedWorkerinfo.id > -1 && day in selectedWorkerinfo.hours) {
-        let startTime = selectedWorkerinfo.hours[day]["start"]
-        let endTime = selectedWorkerinfo.hours[day]["end"]
+        let { start, end, workerId } = selectedWorkerinfo.hours[day]
 
         if (
-          calcDateStr >= Date.parse(timeStr + startTime) 
+          calcDateStr >= Date.parse(timeStr + start) 
           && 
-          calcDateStr <= Date.parse(timeStr + endTime)
+          calcDateStr <= Date.parse(timeStr + end)
         ) {
           availableService = true
-          workerIds = [selectedWorkerinfo.hours[day]["workerId"]]
+          workerIds = [workerId]
         }
-      } else {
-        if (day in allWorkerstime) {
-          let times = allWorkerstime[day]
-          let startTime = "", endTime = ""
+      } else if (day in allWorkerstime) {
+        let times = allWorkerstime[day]
 
-          times.forEach(function (info) {
-            startTime = info.start
-            endTime = info.end
+        times.forEach(function ({ start, end, workerId }) {
+          workerStart = start
+          workerEnd = end
 
-            if (
-              calcDateStr >= Date.parse(timeStr + startTime) 
-              && 
-              calcDateStr <= Date.parse(timeStr + endTime)
-            ) {              
-              availableService = true
-              workerIds.push(info.workerId)
-            }
-          })
-        }
+          if (
+            calcDateStr >= Date.parse(timeStr + start)
+            && 
+            calcDateStr <= Date.parse(timeStr + end)
+          ) {              
+            availableService = true
+            workerIds.push(workerId)
+          }
+        })
       }
 
       if (!timepassed && !timetaken && availableService == true) {
         let startCalc = calcDateStr
 
         for (let k = 1; k <= numBlockTaken; k++) {
-          if (selectedWorkerinfo.id > -1) { // stylist is picked by client
-            workerStart = selectedWorkerinfo.hours[day].start
-            workerEnd = selectedWorkerinfo.hours[day].end
-
+          if (selectedWorkerinfo.id > -1 && day in selectedWorkerinfo.hours) {
             if (startCalc + "-" + selectedWorkerinfo.id + "-bl" in scheduled[selectedWorkerinfo.id]["scheduled"]) { // time is blocked
               if (!JSON.stringify(bookedDateinfo.blocked).includes("\"unix\":" + startCalc)) { // blocked time belong to schedule
                 timeBlocked = true
@@ -536,14 +547,17 @@ export default function Booktime(props) {
       newTimes.push({ key: newTimes.length, row: timesRow })
     }
 
-    setSelecteddateinfo({ ...selectedDateinfo, date, day })
+    setSelecteddateinfo({ 
+      ...selectedDateinfo, date, day, 
+      update: update ? selectedDateinfo.update + 1 : selectedDateinfo.update
+    })
     setTimes(newTimes)
     setStep(2)
   }
   const selectTime = info => {
     const { time, workerIds } = info
 
-    setConfirm({ ...confirm, show: true, service: name ? name : serviceinfo, time, workerIds })
+    setConfirm({ ...confirm, show: true, service: name, time, workerIds })
   }
   const salonChangeTheAppointment = async() => {
     setConfirm({ ...confirm, loading: true })
@@ -566,9 +580,7 @@ export default function Booktime(props) {
       id: scheduleid, // id for socket purpose (updating)
       clientid: clientInfo.id, 
       workerid: workerid > -1 ? workerid : workerIds[Math.floor(Math.random() * (workerIds.length - 1)) + 0], 
-      locationid, 
-      serviceid: serviceid ? serviceid : -1, 
-      serviceinfo: serviceinfo ? serviceinfo : "",
+      locationid, serviceid, 
       time: selecteddate, note: note ? note : "", 
       type: "salonChangeAppointment",
       timeDisplay: displayTime(selecteddate),
@@ -666,17 +678,55 @@ export default function Booktime(props) {
     getAllTheStylists()
     getTheLocationHours()
     getAllTheWorkersTime()
+    getTheServiceInfo()
     getAllScheduledTimes()
     getTheAppointmentInfo()
   }, [])
+  
+  useEffect(() => { // date and time info is changed
+    if (selectedDateinfo.update > 0) {
+      if (selectedDateinfo.updateType == 'time') {
+        const { day, month, date, year, hour, minute } = selectedDateinfo
 
-  useEffect(() => {
-    if (selectedDateinfo.select) {
+        // for rebooking: check if new selected worker is active at new date and time
+        const sDatestr = day + " " + month + " " + date + " " + year + " "
+        const selectedUnix = Date.parse(sDatestr + " " + hour + ":" + minute)
+        const workerid = selectedWorkerinfo.id
+
+        if (day in selectedWorkerinfo.hours) { // stylist is working on selected day
+          const { start, end } = selectedWorkerinfo.hours[day]
+          let startUnix = Date.parse(sDatestr + start), endUnix = Date.parse(sDatestr + end)
+          const compareStr = selectedUnix + "-" + workerid + "-"
+
+          if (
+            selectedUnix > endUnix
+            ||
+            (
+              compareStr + "co" in scheduled[workerid]["scheduled"]
+              ||
+              compareStr + "ca" in scheduled[workerid]["scheduled"]
+              ||
+              compareStr + "bl" in scheduled[workerid]["scheduled"]
+            )
+          ) { // stylist is off or time is blocked, confirmed
+            selectDate()
+          }
+        }
+      } else {
+        const prevTime = new Date(oldTime)
+          
+        getCalendar(prevTime.getMonth(), prevTime.getFullYear())
+      }
+    }
+  }, [selectedDateinfo.update || selectedDateinfo.updateType])
+
+  useEffect(() => { // worker info is changed
+    if (selectedWorkerinfo.update > 0) {
       const prevTime = new Date(oldTime)
-        
+
       getCalendar(prevTime.getMonth(), prevTime.getFullYear())
     }
-  }, [selectedDateinfo.select])
+  }, [selectedWorkerinfo.update || selectedWorkerinfo.updateType])
 
   return (
     <SafeAreaView style={styles.booktime}>
@@ -803,8 +853,7 @@ export default function Booktime(props) {
             {step == 2 && (
               <View style={styles.timesSelection}>
                 <ScrollView style={{ width: '100%' }}>
-                  <Text style={[styles.timesHeader, { fontSize: 15 }]}>{tr.t("booktime.current")} {displayTime(oldTime)}</Text>
-                  <Text style={styles.timesHeader}>{tr.t("booktime.tapDifferentTime")}</Text>
+                  <Text style={[styles.timesHeader, { fontSize: wsize(5), marginBottom: 50 }]}>{displayTime(oldTime).split(" at")[0]}</Text>
 
                   <View style={{ alignItems: 'center' }}>
                     <View style={styles.times}>
