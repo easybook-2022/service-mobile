@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { SafeAreaView, View, FlatList, ScrollView, Text, TextInput, Image, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, Dimensions, Modal, Keyboard } from 'react-native';
+import axios from 'axios';
 import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socket, logo_url } from '../../assets/info'
@@ -14,6 +15,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign'
 
 const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
+let source
 
 export default function Walkin({ navigation }) {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -39,7 +41,7 @@ export default function Walkin({ navigation }) {
     const locationid = await AsyncStorage.getItem("locationid")
     const locationtype = await AsyncStorage.getItem("locationtype")
     const date = new Date(Date.now()), day = days[date.getDay()].substr(0, 3), hour = date.getHours().toString(), minute = date.getMinutes()
-    const data = { locationid, day, hour, minute: minute < 10 ? "0" + minute : minute.toString() }
+    const data = { locationid, day, hour, minute: minute < 10 ? "0" + minute : minute.toString(), cancelToken: source.token }
 
     getAllWorkingStylists(data)
       .then((res) => {
@@ -62,7 +64,7 @@ export default function Walkin({ navigation }) {
   }
   const getTheLocationProfile = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid }
+    const data = { locationid, cancelToken: source.token }
 
     getLocationProfile(data)
       .then((res) => {
@@ -83,8 +85,9 @@ export default function Walkin({ navigation }) {
   }
   const getTheLocationHours = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getLocationHours(locationid)
+    getLocationHours(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -105,8 +108,9 @@ export default function Walkin({ navigation }) {
   }
   const getAllTheWorkersTime = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
     
-    getAllWorkersTime(locationid)
+    getAllWorkersTime(data)
     .then((res) => {
       if (res.status == 200) {
         return res.data
@@ -125,7 +129,7 @@ export default function Walkin({ navigation }) {
   }
   const getAllScheduledTimes = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, ownerid: null }
+    const data = { locationid, ownerid: null, cancelToken: source.token }
 
     getWorkersHour(data)
       .then((res) => {
@@ -159,9 +163,16 @@ export default function Walkin({ navigation }) {
           setLoaded(true)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const selectWorker = id => {
-    getStylistInfo(id)
+    const data = { id, cancelToken: source.token }
+
+    getStylistInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -174,9 +185,16 @@ export default function Walkin({ navigation }) {
           setStep(2)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const getAllMenus = async() => {
-    getMenus(locationId)
+    const data = { locationid: locationId, cancelToken: source.token }
+
+    getMenus(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -332,7 +350,8 @@ export default function Walkin({ navigation }) {
           type: !serviceInfo ? "service" : "",
           name: clientName
         }, 
-        serviceid: serviceInfo ? serviceInfo.id : null
+        serviceid: serviceInfo ? serviceInfo.id : null,
+        cancelToken: source.token
       }
 
       bookWalkIn(data)

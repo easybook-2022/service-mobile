@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, Platform, View, Text, TextInput, Image, TouchableOpacity, TouchableWithoutFeedback, Dimensions, StyleSheet, Keyboard, Modal } from 'react-native';
+import axios from 'axios'
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
-import { loginUser, verifyUser, registerUser } from '../apis/owners'
+import { loginUser, registerUser } from '../apis/owners'
 import { ownerSigninInfo, translate } from '../../assets/info'
 import { displayPhonenumber } from 'geottuse-tools'
 
@@ -11,6 +12,7 @@ import Loadingprogress from '../widgets/loadingprogress'
 
 const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
+let source
 
 export default function Auth({ navigation }) {
   const [cellnumber, setCellnumber] = useState(ownerSigninInfo.cellnumber)
@@ -23,7 +25,7 @@ export default function Auth({ navigation }) {
   const [errorMsg, setErrormsg] = useState('')
 
   const login = () => {
-    const data = { cellnumber, password, worker: true }
+    const data = { cellnumber, password, worker: true, cancelToken: source.token }
     
     loginUser(data)
       .then((res) => {
@@ -59,6 +61,16 @@ export default function Auth({ navigation }) {
     setNoaccount(false)
     setErrormsg('')
   }
+
+  useEffect(() => {
+    source = axios.CancelToken.source();
+
+    return () => {
+      if (source) {
+        source.cancel("components got unmounted");
+      }
+    }
+  }, [])
 
 	return (
 		<SafeAreaView style={styles.auth}>

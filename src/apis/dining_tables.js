@@ -3,20 +3,40 @@ import { url } from '../../assets/info'
 
 const beginUrl = `${url}/dining_tables/`
 
-export const getTables = id => {
-  return axios.get(`${beginUrl}get_tables/${id}`)
+export const getTables = data => {
+  const { locationid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_tables/${locationid}`,
+    { cancelToken }
+  )
 }
 
-export const getTableBills = id => {
-  return axios.get(`${beginUrl}get_table_bills/${id}`)
+export const getTableBills = data => {
+  const { locationid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_table_bills/${locationid}`,
+    { cancelToken }
+  )
 }
 
-export const getOrderingTables = id => {
-  return axios.get(`${beginUrl}get_ordering_tables/${id}`)
+export const getOrderingTables = data => {
+  const { locationid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_ordering_tables/${locationid}`,
+    { cancelToken }
+  )
 }
 
-export const getQrCode = id => {
-  return axios.get(`${beginUrl}get_qr_code/${id}`)
+export const getQrCode = data => {
+  const { tableid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_qr_code/${tableid}`,
+    { cancelToken }
+  )
 }
 
 export const orderMeal = data => {
@@ -26,19 +46,13 @@ export const orderMeal = data => {
   )
 }
 
-export const viewTableOrders = id => {
-  return axios.get(`${beginUrl}view_table_orders/${id}`)
-}
+export const viewTableOrders = data => {
+  const { tableid, cancelToken } = data
 
-export const addTable = data => {
-  return axios.post(
-    `${beginUrl}add_table`,
-    data
+  return axios.get(
+    `${beginUrl}view_table_orders/${tableid}`,
+    { cancelToken }
   )
-}
-
-export const removeTable = id => {
-  return axios.get(`${beginUrl}remove_table/${id}`)
 }
 
 export const finishOrder = data => {
@@ -48,8 +62,13 @@ export const finishOrder = data => {
   )
 }
 
-export const viewPayment = id => {
-  return axios.get(`${beginUrl}view_payment/${id}`)
+export const viewPayment = data => {
+  const { tableid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}view_payment/${tableid}`,
+    { cancelToken }
+  )
 }
 
 export const finishDining = data => {

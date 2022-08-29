@@ -29,6 +29,7 @@ const wsize = p => {return width * (p / 100)}
 const steps = ['nickname', 'profile', 'hours']
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+let source
 
 export default function Register(props) {
   const [language, setLanguage] = useState('')
@@ -57,7 +58,7 @@ export default function Register(props) {
     const locationid = await AsyncStorage.getItem("locationid")
     const locationtype = await AsyncStorage.getItem("locationtype")
     const newBusiness = await AsyncStorage.getItem("newBusiness")
-    const data = { locationid }
+    const data = { locationid, cancelToken: source.token }
 
     tr.locale = await AsyncStorage.getItem("language")
 
@@ -246,7 +247,7 @@ export default function Register(props) {
     })
 
     if (!invalid) {
-      const data = { id, username, profile, permission: cameraPermission || pickingPermission, hours }
+      const data = { id, username, profile, permission: cameraPermission || pickingPermission, hours, cancelToken: source.token }
 
       saveUserInfo(data)
         .then((res) => {
@@ -485,6 +486,14 @@ export default function Register(props) {
 
   useEffect(() => {
     getTheLocationProfile()
+
+    source = axios.CancelToken.source();
+
+    return () => {
+      if (source) {
+        source.cancel("components got unmounted");
+      }
+    }
   }, [])
 
   useEffect(() => {

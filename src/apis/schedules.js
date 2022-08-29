@@ -3,8 +3,13 @@ import { url } from '../../assets/info'
 
 const beginUrl = `${url}/schedules/`
 
-export const getAppointmentInfo = id => {
-	return axios.get(`${beginUrl}get_appointment_info/${id}`)
+export const getAppointmentInfo = data => {
+  const { scheduleid, cancelToken } = data
+
+	return axios.get(
+    `${beginUrl}get_appointment_info/${scheduleid}`,
+    { cancelToken }
+  )
 }
 
 export const getReschedulingAppointments = data => {
@@ -49,12 +54,13 @@ export const getAppointments = data => {
 	)
 }
 
-export const getCartOrderers = id => {
-	return axios.get(`${beginUrl}get_cart_orderers/${id}`)
-}
+export const getCartOrderers = data => {
+  const { locationid, cancelToken } = data
 
-export const getCartOrders = id => {
-	return axios.get(`${beginUrl}get_cart_orders/${id}`)
+	return axios.get(
+    `${beginUrl}get_cart_orderers/${locationid}`,
+    { cancelToken }
+  )
 }
 
 export const bookWalkIn = data => {
@@ -78,6 +84,11 @@ export const blockTime = data => {
   )
 }
 
-export const doneService = id => {
-  return axios.get(`${beginUrl}done_service/${id}`)
+export const doneService = data => {
+  const { scheduleid, cancelToken } = data
+  
+  return axios.get(
+    `${beginUrl}done_service/${scheduleid}`,
+    { cancelToken }
+  )
 }

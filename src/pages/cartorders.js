@@ -19,6 +19,7 @@ import Loadingprogress from '../widgets/loadingprogress'
 
 const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
+let source
 
 export default function Cartorders(props) {
 	const { userid, type, ordernumber } = props.route.params
@@ -40,7 +41,7 @@ export default function Cartorders(props) {
 
 		const ownerid = await AsyncStorage.getItem("ownerid")
 		const locationid = await AsyncStorage.getItem("locationid")
-		const data = { userid, locationid, ordernumber }
+		const data = { userid, locationid, ordernumber, cancelToken: source.token }
 
 		getOrders(data)
 			.then((res) => {
@@ -65,7 +66,7 @@ export default function Cartorders(props) {
   const orderIsDone = async() => {
     const time = Date.now()
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { userid, ordernumber, locationid, type: "orderDone", receiver: ["user" + userid] }
+    const data = { userid, ordernumber, locationid, type: "orderDone", receiver: ["user" + userid], cancelToken: source.token }
 
     setLoading(true)
 
@@ -115,7 +116,7 @@ export default function Cartorders(props) {
   }
   const setTheWaitTime = () => {
     const { waitTime } = showSetwaittime
-    let data = { type: "setWaitTime", ordernumber, waitTime }
+    let data = { type: "setWaitTime", ordernumber, waitTime, cancelToken: source.token }
 
     setWaitTime(data)
       .then((res) => {
@@ -140,6 +141,14 @@ export default function Cartorders(props) {
 
 	useEffect(() => {
 		getTheOrders()
+
+    source = axios.CancelToken.source();
+
+    return () => {
+      if (source) {
+        source.cancel("components got unmounted");
+      }
+    }
 	}, [])
 
 	return (

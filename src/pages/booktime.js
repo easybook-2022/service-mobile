@@ -3,6 +3,7 @@ import {
   SafeAreaView, ActivityIndicator, Platform, Dimensions, ScrollView, View, FlatList, Text, Image, TextInput, 
   TouchableOpacity, TouchableWithoutFeedback, Keyboard, StyleSheet, Modal 
 } from 'react-native';
+import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
 import { displayTime, resizePhoto } from 'geottuse-tools'
@@ -18,6 +19,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign'
 
 const { height, width } = Dimensions.get('window')
 const wsize = p => {return width * (p / 100)}
+let source
 
 export default function Booktime(props) {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -76,7 +78,9 @@ export default function Booktime(props) {
   const [confirm, setConfirm] = useState({ show: false, service: "", time: 0, workerIds: [], note: "", requested: false, errormsg: "" })
 
   const getTheAppointmentInfo = (fetchBlocked) => {
-    getAppointmentInfo(scheduleid)
+    const data = { scheduleid, cancelToken: source.token }
+
+    getAppointmentInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -136,7 +140,9 @@ export default function Booktime(props) {
       })
   }
   const getTheServiceInfo = () => {
-    getServiceInfo(serviceid)
+    const data = { serviceid, cancelToken: source.token }
+
+    getServiceInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -159,7 +165,7 @@ export default function Booktime(props) {
       months[currTime.getMonth()] + " " + 
       currTime.getDate() + " " + 
       currTime.getFullYear()
-    ), timeStr = "", newMonth, newDate
+    ), timeStr = "", newMonth, newDate = null
 
     data.forEach(function (info, rowindex) {
       info.row.forEach(function (day, dayindex) {
@@ -262,25 +268,35 @@ export default function Booktime(props) {
       })
     })
 
-    newMonth = months[month]
-    newDate = bookedDateinfo.date == 0 ? 
-        currDate 
-        : 
-        bookedDateinfo.date < currDate ? currDate : bookedDateinfo.date
+    if (currDate > 0) {
+      newMonth = months[month]
 
-    setSelecteddateinfo({ 
-      ...selectedDateinfo, 
-      month: newMonth, day: currDay, 
-      date: newDate, year,
-      update: scheduleid ? selectedDateinfo.update + 1 : selectedWorkerinfo.update,
-      updateType: scheduleid ? 'time' : selectedDateinfo.updateType
-    })
-    setCalendar({ ...calendar, data, firstDay, numDays })
+      if (months.indexOf(bookedDateinfo.month) < month || bookedDateinfo.date < currDate) {
+        newDate = currDate
+      } else {
+        newDate = bookedDateinfo.date
+      }
+
+      setSelecteddateinfo({ 
+        ...selectedDateinfo, 
+        month: newMonth, day: currDay, 
+        date: newDate, year,
+        update: scheduleid ? selectedDateinfo.update + 1 : selectedWorkerinfo.update,
+        updateType: scheduleid ? 'time' : selectedDateinfo.updateType
+      })
+      setCalendar({ ...calendar, data, firstDay, numDays })
+    } else {
+      getCalendar(
+        month == 11 ? 0 : month + 1,
+        month == 11 ? year + 1 : year
+      )
+    }
   }
   const getTheLocationHours = async(time) => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
     
-    getLocationHours(locationid)
+    getLocationHours(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -305,8 +321,9 @@ export default function Booktime(props) {
     setLanguage(await AsyncStorage.getItem("language"))
 
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getAllStylists(locationid)
+    getAllStylists(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -325,8 +342,9 @@ export default function Booktime(props) {
   }
   const getAllTheWorkersTime = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getAllWorkersTime(locationid)
+    getAllWorkersTime(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -345,7 +363,7 @@ export default function Booktime(props) {
   }
   const getAllScheduledTimes = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, ownerid: null }
+    const data = { locationid, ownerid: null, cancelToken: source.token }
 
     getWorkersHour(data)
       .then((res) => {
@@ -380,7 +398,9 @@ export default function Booktime(props) {
       })
   }
   const selectWorker = (id, showCalendar) => {
-    getStylistInfo(id)
+    const data = { workerid: id, cancelToken: source.token }
+
+    getStylistInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -388,9 +408,11 @@ export default function Booktime(props) {
       })
       .then((res) => {
         if (res) {
+          const workerHours = res.days
+
           setSelectedworkerinfo({ 
-            ...selectedWorkerinfo, id, username: res.username, profile: res.profile, hours: res.days, 
-            update: selectedWorkerinfo.update + 1, updateType: 'calender' 
+            ...selectedWorkerinfo, id, username: res.username, profile: res.profile, 
+            hours: workerHours, update: selectedWorkerinfo.update + 1, updateType: 'calender' 
           })
 
           if (!scheduleid) {
@@ -584,7 +606,7 @@ export default function Booktime(props) {
       time: selecteddate, note: note ? note : "", 
       type: "salonChangeAppointment",
       timeDisplay: displayTime(selecteddate),
-      blocked, unix: time
+      blocked, unix: time, cancelToken: source.token
     }
 
     salonChangeAppointment(data)
@@ -651,8 +673,9 @@ export default function Booktime(props) {
 
   const logout = async() => {
     const ownerid = await AsyncStorage.getItem("ownerid")
+    const data = { ownerid, cancelToken: source.token }
 
-    logoutUser(ownerid)
+    logoutUser(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -675,12 +698,20 @@ export default function Booktime(props) {
   }
 
   useEffect(() => {
+    source = axios.CancelToken.source();
+    
     getAllTheStylists()
     getTheLocationHours()
     getAllTheWorkersTime()
     getTheServiceInfo()
     getAllScheduledTimes()
     getTheAppointmentInfo()
+
+    return () => {
+      if (source) {
+        source.cancel("components got unmounted");
+      }
+    }
   }, [])
   
   useEffect(() => { // date and time info is changed
@@ -709,7 +740,7 @@ export default function Booktime(props) {
               compareStr + "bl" in scheduled[workerid]["scheduled"]
             )
           ) { // stylist is off or time is blocked, confirmed
-            selectDate()
+            setStep(1)
           }
         }
       } else {

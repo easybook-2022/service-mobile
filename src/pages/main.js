@@ -16,19 +16,16 @@ import QRCode from 'react-native-qrcode-svg';
 import { tr } from '../../assets/translate'
 import { loginInfo, ownerSigninInfo, socket, logo_url, timeControl, tableUrl } from '../../assets/info'
 import { getId, displayTime, resizePhoto, displayPhonenumber } from 'geottuse-tools'
-import { 
-  updateNotificationToken, updateOwner, getOtherWorkers, getAccounts, logoutUser, getWorkersTime, getAllWorkersTime, getWorkersHour, 
-  switchAccount
-} from '../apis/owners'
-import { getTables, getTableOrders, finishOrder, viewPayment, finishDining, getQrCode, orderMeal, viewTableOrders, addTable, removeTable, getTableBills, getOrderingTables } from '../apis/dining_tables'
-import { getLocationProfile, getLocationHours, updateInformation, getLogins, updateAddress, updateLogo, setReceiveType, getDayHours } from '../apis/locations'
-import { getMenus, removeMenu, addNewMenu } from '../apis/menus'
+import { updateNotificationToken, logoutUser, getWorkersTime, getAllWorkersTime, getWorkersHour } from '../apis/owners'
+import { getTables, getTableOrders, finishOrder, viewPayment, finishDining, getQrCode, orderMeal, viewTableOrders, getTableBills, getOrderingTables } from '../apis/dining_tables'
+import { getLocationProfile, getLocationHours, getLogins, getDayHours } from '../apis/locations'
+import { getMenus } from '../apis/menus'
 import { 
   cancelSchedule, doneService, getAppointments, 
   removeBooking, getAppointmentInfo, getReschedulingAppointments, 
   blockTime, salonChangeAppointment, pushAppointments
 } from '../apis/schedules'
-import { getProductInfo, removeProduct } from '../apis/products'
+import { getProductInfo } from '../apis/products'
 import { setWaitTime, getCartOrderers } from '../apis/carts'
 
 import FontAwesome from 'react-native-vector-icons/FontAwesome'
@@ -78,7 +75,6 @@ export default function Main(props) {
   const [tables, setTables] = useState([])
   const [menuInfo, setMenuinfo] = useState({ list: [ ], photos: [] })
   const [tableBills, setTablebills] = useState([])
-  const [showAddtable, setShowaddtable] = useState({ show: false, table: "", errorMsg: "" })
   const [showRemovetable, setShowremovetable] = useState({ show: false, table: { id: -1, name: "" } })
 
   const [loaded, setLoaded] = useState(false)
@@ -125,7 +121,6 @@ export default function Main(props) {
     },
     errorMsg: ""
   })
-  const [accountHolders, setAccountholders] = useState([])
 
   const [hoursRange, setHoursrange] = useState([])
   const [hoursRangesameday, setHoursrangesameday] = useState(null)
@@ -161,11 +156,11 @@ export default function Main(props) {
     }
 
     const { data } = await Notifications.getExpoPushTokenAsync({
-      experienceId: "@robogram/serviceapp-business"
+      experienceId: "@robogram/serviceapp-service"
     })
 
     if (ownerid) {
-      updateNotificationToken({ ownerid, token: data })
+      updateNotificationToken({ ownerid, token: data, cancelToken: source.token })
         .then((res) => {
           if (res.status == 200) {
             return res.data
@@ -189,7 +184,7 @@ export default function Main(props) {
     const usertype = await AsyncStorage.getItem("userType")
     const locationid = await AsyncStorage.getItem("locationid")
     const tableInfo = JSON.parse(await AsyncStorage.getItem("table"))
-    const data = { locationid }
+    const data = { locationid, cancelToken: source.token }
 
     setUsertype(usertype)
 
@@ -297,8 +292,9 @@ export default function Main(props) {
   }
   const getTheLocationHours = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getLocationHours(locationid)
+    getLocationHours(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -321,8 +317,9 @@ export default function Main(props) {
   }
   const getTheWorkersTime = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getWorkersTime(locationid)
+    getWorkersTime(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -341,8 +338,9 @@ export default function Main(props) {
   }
   const getAllTheWorkersTime = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getAllWorkersTime(locationid)
+    getAllWorkersTime(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -353,12 +351,17 @@ export default function Main(props) {
           setWorkershoursinfo(res.workers)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
 
   const getTheWorkersHour = async(getlist) => {
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, ownerid: null }
-    let jsonDate = { ...chartInfo.date, cancelToken: source.token }
+    const data = { locationid, ownerid: null, cancelToken: source.token }
+    let jsonDate = { ...chartInfo.date }
 
     getWorkersHour(data)
       .then((res) => {
@@ -423,7 +426,7 @@ export default function Main(props) {
 
     const ownerid = await AsyncStorage.getItem("ownerid")
     const locationid = await AsyncStorage.getItem("locationid")
-    const data = { ownerid, locationid }
+    const data = { ownerid, locationid, cancelToken: source.token }
 
     getAppointments(data)
       .then((res) => {
@@ -478,7 +481,7 @@ export default function Main(props) {
       if (dir == null && ((now + 900000) >= closedtime || working == false)) {
         getAppointmentsChart(dayDir + 1, "right")
       } else {
-        const data = { locationid, jsonDate }
+        const data = { locationid, jsonDate, cancelToken: source.token }
 
         for (let worker in newWorkershour) {
           for (let info in newWorkershour[worker]) {
@@ -555,9 +558,9 @@ export default function Main(props) {
       }
     } else {
       if (
-          dir == "right" 
-          || 
-          dir == null // at first render
+        dir == "right" 
+        || 
+        dir == null // at first render
       ) {
         getAppointmentsChart(dayDir + 1, dir)
       } else {
@@ -737,7 +740,7 @@ export default function Main(props) {
 
     if (compute) {
       const { pushBy, selectedIds, selectedFactor } = scheduleOption
-      const data = { date: chartInfo.date, selectedIds }
+      const data = { date: chartInfo.date, selectedIds, cancelToken: source.token }
 
       getReschedulingAppointments(data)
         .then((res) => {
@@ -798,7 +801,7 @@ export default function Main(props) {
               })
             })
 
-            let data = { schedules: reschedules, type: "pushAppointments" }
+            let data = { schedules: reschedules, type: "pushAppointments", cancelToken: source.token }
 
             pushAppointments(data)
               .then((res) => {
@@ -821,11 +824,16 @@ export default function Main(props) {
               })
           }
         })
+        .catch((err) => {
+          if (err.response && err.response.status == 400) {
+            const { errormsg, status } = err.response.data
+          }
+        })
     }
   }
   const blockTheTime = (workerid, jsonDate) => {
     const newWorkershour = {...chartInfo.workersHour}
-    const data = { workerid, jsonDate, time: jsonDateToUnix(jsonDate) }
+    const data = { workerid, jsonDate, time: jsonDateToUnix(jsonDate), cancelToken: source.token }
 
     blockTime(data)
       .then((res) => {
@@ -845,7 +853,9 @@ export default function Main(props) {
       })
   }
   const showScheduleOption = (id, type, index, action) => {
-    getAppointmentInfo(id)
+    const data = { scheduleid: id, cancelToken: source.token }
+
+    getAppointmentInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -889,6 +899,11 @@ export default function Main(props) {
           }
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const rebookSchedule = async(time, jsonDate, worker) => {
     const { id, client, service, blocked, oldTime, note } = scheduleOption
@@ -908,7 +923,7 @@ export default function Main(props) {
       time: jsonDate, note, 
       timeDisplay: displayTime(jsonDate), 
       type: "salonChangeAppointment",
-      blocked
+      blocked, cancelToken: source.token
     }
 
     salonChangeAppointment(data)
@@ -954,10 +969,11 @@ export default function Main(props) {
       })
   }
 
-  const getAllCartOrderers = async(show) => {
+  const getAllCartOrderers = async show => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getCartOrderers(locationid)
+    getCartOrderers(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -980,8 +996,9 @@ export default function Main(props) {
   }
   const getAllTableBills = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getTableBills(locationid)
+    getTableBills(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1003,8 +1020,9 @@ export default function Main(props) {
   }
   const getAllOrderingTables = async(show) => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getOrderingTables(locationid)
+    getOrderingTables(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1028,8 +1046,9 @@ export default function Main(props) {
   }
   const getAllMenus = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getMenus(locationid)
+    getMenus(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1042,11 +1061,17 @@ export default function Main(props) {
           setLoaded(true)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const getAllTables = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getTables(locationid)
+    getTables(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1082,9 +1107,9 @@ export default function Main(props) {
       })
   }
   const showQrCode = async(id) => {
-    const locationid = await AsyncStorage.getItem("locationid")
+    const data = { tableid: id, cancelToken: source.token }
 
-    getQrCode(id)
+    getQrCode(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1105,8 +1130,9 @@ export default function Main(props) {
   }
   const getTheTable = async() => {
     const tableInfo = JSON.parse(await AsyncStorage.getItem("table"))
+    const data = { tableid: tableInfo.name, cancelToken: source.token }
 
-    getQrCode(tableInfo.name)
+    getQrCode(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1117,9 +1143,16 @@ export default function Main(props) {
           setNumtableorders(res.numOrders)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const selectDiningTable = tableId => {
-    getQrCode(tableId)
+    const data = { tableid: tableId, cancelToken: source.token }
+
+    getQrCode(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1183,7 +1216,9 @@ export default function Main(props) {
     )
   }
   const getMealInfo = id => {
-    getProductInfo(id)
+    const data = { productid: id, cancelToken: source.token }
+
+    getProductInfo(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1210,6 +1245,11 @@ export default function Main(props) {
             id, cost: newCost, name, image: productImage, 
             sizes, quantities, percents, price, quantity
           })
+        }
+      })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
         }
       })
   }
@@ -1297,8 +1337,9 @@ export default function Main(props) {
   }
   const viewTheTableOrders = async() => {
     const tableInfo = JSON.parse(await AsyncStorage.getItem("table"))
+    const data = { tableid: tableInfo.name, cancelToken: source.token }
 
-    viewTableOrders(tableInfo.name)
+    viewTableOrders(data)
       .then((res) => {
         if (res.status === 200) {
           return res.data
@@ -1409,7 +1450,7 @@ export default function Main(props) {
       percents = []
     })
 
-    let data = { orders: JSON.stringify(newOrders), tableid: tableInfo.name }
+    let data = { orders: JSON.stringify(newOrders), tableid: tableInfo.name, cancelToken: source.token }
 
     orderMeal(data)
       .then((res) => {
@@ -1517,7 +1558,7 @@ export default function Main(props) {
   }
   const finishTheOrder = (orderid, id) => {
     const newTableorders = [...tableOrders]
-    const data = { orderid, id }
+    const data = { orderid, tableid: id, cancelToken: source.token }
 
     finishOrder(data)
       .then((res) => {
@@ -1530,9 +1571,16 @@ export default function Main(props) {
           getAllOrderingTables(false)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const viewThePayment = id => {
-    viewPayment(id)
+    const data = { tableid: id, cancelToken: source.token }
+
+    viewPayment(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1574,7 +1622,7 @@ export default function Main(props) {
     const hour = time.getHours(), minute = time.getMinutes()
     const timeStr = { day, month, date, year, hour, minute }
 
-    const data = { id: showPayment.id, time: timeStr }
+    const data = { tableid: showPayment.id, time: timeStr, cancelToken: source.token }
 
     finishDining(data)
       .then((res) => {
@@ -1588,11 +1636,16 @@ export default function Main(props) {
           getAllTableBills(false)
         }
       })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
 
   const removeTheBooking = () => {
     const { id, workerid, date, reason } = scheduleOption
-    let data = { scheduleid: id, reason, type: "cancelSchedule" }
+    let data = { scheduleid: id, reason, type: "cancelSchedule", cancelToken: source.token }
 
     removeBooking(data)
       .then((res) => {
@@ -1628,7 +1681,7 @@ export default function Main(props) {
   }
   const cancelTheSchedule = () => {
     const { reason, id, index } = scheduleOption
-    let data = { scheduleid: id, reason, type: "cancelSchedule" }
+    let data = { scheduleid: id, reason, type: "cancelSchedule", cancelToken: source.token }
 
     cancelSchedule(data)
       .then((res) => {
@@ -1665,7 +1718,9 @@ export default function Main(props) {
   }
 
   const doneTheService = (index, id) => {
-    doneService(id)
+    let data = { scheduleid: id, cancelToken: source.token }
+
+    doneService(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1674,7 +1729,8 @@ export default function Main(props) {
       .then((res) => {
         if (res) {
           const { list } = {...appointments}
-          let data = { id, type: "doneService", receiver: res.receiver }
+          
+          data = { id, type: "doneService", receiver: res.receiver }
 
           list.splice(index, 1)
 
@@ -1731,8 +1787,9 @@ export default function Main(props) {
   }
   const logout = async() => {
     const ownerid = await AsyncStorage.getItem("ownerid")
+    const data = { ownerid, cancelToken: source.token }
 
-    logoutUser(ownerid)
+    logoutUser(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1745,6 +1802,11 @@ export default function Main(props) {
 
             props.navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: "auth" }]}));
           })
+        }
+      })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
         }
       })
   }
@@ -1805,8 +1867,9 @@ export default function Main(props) {
   }
   const getTheLogins = async() => {
     const locationid = await AsyncStorage.getItem("locationid")
+    const data = { locationid, cancelToken: source.token }
 
-    getLogins(locationid)
+    getLogins(data)
       .then((res) => {
         if (res.status == 200) {
           return res.data
@@ -1826,406 +1889,13 @@ export default function Main(props) {
           })
         }
       })
-  }
-
-  const getAllAccounts = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-
-    getAccounts(locationid)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          setAccountholders(res.accounts)
-        }
-      })
       .catch((err) => {
         if (err.response && err.response.status == 400) {
           const { errormsg, status } = err.response.data
         }
       })
   }
-  const updateTheInformation = async() => {
-    const { storeName, phonenumber } = editInfo
 
-    if (storeName && phonenumber) {
-      const id = await AsyncStorage.getItem("locationid")
-      const data = { id, storeName, phonenumber }
-
-      updateInformation(data)
-        .then((res) => {
-          if (res.status == 200) {
-            return res.data
-          }
-        })
-        .then((res) => {
-          if (res) {
-
-            setStorename(storeName)
-            setPhonenumber(phonenumber)
-            setShowmoreoptions({ ...showMoreoptions, infoType: '' })
-            setEditinfo({ ...editInfo, show: false, type: '', loading: false })
-          }
-        })
-        .catch((err) => {
-          if (err.response && err.response.status == 400) {
-            const { errormsg, status } = err.response.data
-
-            setEditinfo({ ...editInfo, errorMsg: errormsg, loading: false })
-          }
-        })
-    } else {
-      if (!storeName) {
-        setEditinfo({ ...editInfo, errorMsg: "Please enter your store name" })
-
-        return
-      }
-
-      if (!phonenumber) {
-        setEditinfo({ ...editInfo, errorMsg: "Please enter your store phone number" })
-
-        return
-      }
-    }
-  }
-  const setWorkingTime = () => {
-    const newAccountform = {...accountForm}
-    const { daysInfo } = newAccountform
-    const newWorkerhours = []
-    const newWorkerhourssameday = {}
-    const newHoursrangesameday = {}
-    let emptyDays = true, info, numWorking = 0
-
-    days.forEach(function (day, index) {
-      if (index == 0) {
-        info = locationHours[0]
-      } else {
-        if (locationHours[index].openTime > info.openTime && locationHours[index].closeTime < info.closeTime) {
-          info = locationHours[index]
-        }
-      }
-
-      newWorkerhours.push({
-        key: newWorkerhours.length.toString(),
-        header: day,
-        opentime: {...locationHours[index].opentime},
-        closetime: {...locationHours[index].closetime},
-        working: daysInfo.working[index] ? true : false,
-        close: locationHours[index].close
-      })
-
-      if (daysInfo.working[index] != '') {
-        numWorking++
-        emptyDays = false
-      }
-    })
-
-    newWorkerhourssameday["opentime"] = info.opentime
-    newWorkerhourssameday["closetime"] = info.closetime
-    newWorkerhourssameday["working"] = true
-
-    newHoursrangesameday["opentime"] = info.opentime
-    newHoursrangesameday["openTime"] = info.openTime
-    newHoursrangesameday["closetime"] = info.closetime
-    newHoursrangesameday["closeTime"] = info.closeTime
-    newHoursrangesameday["date"] = info.date
-    newHoursrangesameday["working"] = true
-
-    if (!emptyDays) {
-      daysInfo.done = true
-      daysInfo.sameHours = numWorking == 1 ? false : daysInfo.sameHours,
-      daysInfo.workerHours = newWorkerhours
-      daysInfo.workerHourssameday = newWorkerhourssameday
-
-      setAccountform({ 
-        ...accountForm, 
-        daysInfo,
-        workerHours: newWorkerhours,
-        workerHourssameday: newWorkerhourssameday,
-        errorMsg: ''
-      })
-      setHoursrangesameday(newHoursrangesameday)
-    } else {
-      setAccountform({ ...accountForm, errorMsg: '' })
-    }
-  }
-  const updateWorkingHour = (index, timetype, dir, open) => {
-    const newWorkerhours = [...accountForm.workerHours], newHoursrange = [...hoursRange]
-    let value, { openTime, closeTime, date } = newHoursrange[index]
-    let { opentime, closetime } = newWorkerhours[index], valid = false
-
-    value = open ? opentime : closetime
-
-    let { hour, minute, period } = timeControl(timetype, value, dir, open)
-    let calcTime = Date.parse(date + " " + hour + ":" + minute + " " + period)
-
-    if (open) {
-      valid = (calcTime >= openTime && calcTime <= Date.parse(date + " " + closetime.hour + ":" + closetime.minute + " " + closetime.period))
-    } else {
-      valid = (calcTime <= closeTime && calcTime >= Date.parse(date + " " + opentime.hour + ":" + opentime.minute + " " + opentime.period))
-    }
-      
-    if (valid) {
-      value.hour = hour < 10 ? "0" + hour : hour.toString()
-      value.minute = minute < 10 ? "0" + minute : minute.toString()
-      value.period = period
-
-      if (open) {
-        newWorkerhours[index].opentime = value
-      } else {
-        newWorkerhours[index].closetime = value
-      }
-
-      setAccountform({ ...accountForm, workerHours: newWorkerhours })
-    }
-  }
-  const updateWorkingSameHour = (timetype, dir, open) => {
-    const newWorkerhourssameday = {...accountForm.workerHourssameday}
-    let value, { openTime, closeTime, date } = hoursRangesameday
-    let { opentime, closetime } = newWorkerhourssameday, valid = false
-
-    value = open ? opentime : closetime
-
-    let { hour, minute, period } = timeControl(timetype, value, dir, open)
-    let calcTime = Date.parse(date + " " + hour + ":" + minute + " " + period)
-
-    if (open) {
-      valid = (calcTime >= openTime && calcTime <= Date.parse(date + " " + closetime.hour + ":" + closetime.minute + " " + closetime.period))
-    } else {
-      valid = (calcTime <= closeTime && calcTime >= Date.parse(date + " " + opentime.hour + ":" + opentime.minute + " " + opentime.period))
-    }
-
-    if (valid) {
-      value.hour = hour < 10 ? "0" + hour : hour.toString()
-      value.minute = minute < 10 ? "0" + minute : minute.toString()
-      value.period = period
-
-      if (open) {
-        newWorkerhourssameday.opentime = value
-      } else {
-        newWorkerhourssameday.closetime = value
-      }
-
-      setAccountform({ ...accountForm, workerHourssameday: newWorkerhourssameday })
-    }
-  }
-  const updateTime = (index, timetype, dir, open) => {
-    const newLocationhours = [...locationHours]
-    let value, { opentime, closetime } = newLocationhours[index]
-
-    value = open ? opentime : closetime
-    
-    let { hour, minute, period } = timeControl(timetype, value, dir, open)
-
-    value.hour = hour < 10 ? "0" + hour : hour.toString()
-    value.minute = minute < 10 ? "0" + minute : minute.toString()
-    value.period = period
-
-    if (open) {
-      newLocationhours[index].opentime = value
-    } else {
-      newLocationhours[index].closetime = value
-    }
-
-    setLocationhours(newLocationhours)
-  }
-  const working = index => {
-    const newWorkerhours = [...accountForm.workerHours]
-
-    newWorkerhours[index].working = !newWorkerhours[index].working
-
-    setAccountform({ ...accountForm, workerHours: newWorkerhours })
-  }
-  const updateTheOwner = async() => {
-    setAccountform({ ...accountForm, loading: true, errorMsg: "" })
-
-    const { cellnumber, username, profile, currentPassword, newPassword, confirmPassword } = accountForm
-    let data = { ownerid: accountForm.id, type: accountForm.editType }
-
-    switch (accountForm.editType) {
-      case "cellnumber":
-        data = { ...data, cellnumber }
-
-        break;
-      case "username":
-        data = { ...data, username }
-
-        break;
-      case "profile":
-        data = { ...data, profile }
-
-        break;
-      case "password":
-        data = { ...data, currentPassword, newPassword, confirmPassword }
-
-        break;
-      case "hours":
-        const hours = {}
-
-        accountForm.workerHours.forEach(function (workerHour) {
-          let { opentime, closetime, working, takeShift } = workerHour
-          let newOpentime = {...opentime}, newClosetime = {...closetime}
-          let openhour = parseInt(newOpentime.hour), closehour = parseInt(newClosetime.hour)
-          let openperiod = newOpentime.period, closeperiod = newClosetime.period
-
-          if (openperiod == "PM") {
-            if (openhour < 12) {
-              openhour += 12
-            }
-
-            openhour = openhour < 10 ? 
-              "0" + openhour
-              :
-              openhour.toString()
-          } else {
-            if (openhour == 12) {
-              openhour = "00"
-            } else if (openhour < 10) {
-              openhour = "0" + openhour
-            } else {
-              openhour = openhour.toString()
-            }
-          }
-
-          if (closeperiod == "PM") {
-            if (closehour < 12) {
-              closehour += 12
-            }
-
-            closehour = closehour < 10 ? 
-              "0" + closehour
-              :
-              closehour.toString()
-          } else {
-            if (closehour == 12) {
-              closehour = "00"
-            } else if (closehour < 10) {
-              closehour = "0" + closehour
-            } else {
-              closehour = closehour.toString()
-            }
-          }
-
-          newOpentime.hour = openhour
-          newClosetime.hour = closehour
-
-          delete newOpentime.period
-          delete newClosetime.period
-
-          if (takeShift) {
-            delete takeShift.key
-          }
-
-          hours[workerHour.header.substr(0, 3)] = { 
-            opentime: newOpentime, 
-            closetime: newClosetime, working, 
-            takeShift: takeShift ? takeShift.id : ""
-          }
-        })
-
-        data = { ...data, hours }
-
-        break;
-      default:
-    }
-
-    updateOwner(data)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          setAccountform({
-            ...accountForm,
-            show: false,
-            type: '', editType: '', 
-            username: "", editUsername: false, 
-            cellnumber: "", editCellnumber: false,
-            currentPassword: "", newPassword: "", confirmPassword: "", editPassword: false, 
-            profile: { name: "", uri: "" }, editProfile: false, 
-            daysInfo: { working: ['', '', '', '', '', '', ''], done: false, sameHours: null }, workerHours: [], workerHourssameday: null, editHours: false,
-            loading: false, errorMsg: ""
-          })
-          setEditinfo({ ...editInfo, show: true })
-          getAllAccounts()
-          getTheWorkersHour(false)
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg, status } = err.response.data
-
-          switch (status) {
-            case "cellnumber":
-              setAccountform({ ...accountForm, editCellnumber: true, editHours: false, errorMsg: errormsg, loading: false })
-
-              break;
-            case "password":
-              setAccountform({ ...accountForm, editPassword: true, editHours: false, errorMsg: errormsg, loading: false })
-
-              break;
-            default:
-
-          }
-        }
-      })
-  }
-  const cancelTheShift = async(day) => {
-    const newWorkerhours = [...accountForm.workerHours]
-
-    newWorkerhours.forEach(function (info) {
-      if (info.header.substr(0, 3) == day) {
-        info.takeShift = ""
-      }
-    })
-
-    setAccountform({...accountForm, workerHours: newWorkerhours })
-  }
-  const getTheOtherWorkers = async(day) => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const data = { ownerid: accountForm.id, locationid, day }
-
-    getOtherWorkers(data)
-      .then((res) => {
-        if (res.status == 200) {
-          return res.data
-        }
-      })
-      .then((res) => {
-        if (res) {
-          setGetworkersbox({
-            ...getWorkersbox,
-            show: true,
-            workers: res.workers,
-            day
-          })
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status == 400) {
-          const { errormsg, status } = err.response.data
-        }
-      })
-  }
-  const selectTheOtherWorker = workerInfo => {
-    const { day } = getWorkersbox
-
-    const newWorkerhours = [...accountForm.workerHours]
-
-    newWorkerhours.forEach(function (info) {
-      if (info.header.substr(0, 3) == day) {
-        info.takeShift = workerInfo
-      }
-    })
-
-    setAccountform({...accountForm, workerHours: newWorkerhours })
-    setGetworkersbox({ ...getWorkersbox, show: false })
-  }
   const jsonDateToUnix = date => {
     return Date.parse(date["month"] + " " + date["date"] + ", " + date["year"] + " " + date["hour"] + ":" + date["minute"])
   }
@@ -2245,7 +1915,9 @@ export default function Main(props) {
     source = axios.CancelToken.source();
 
     return () => {
-      source.cancel("components got unmounted");
+      if (source) {
+        source.cancel("components got unmounted");
+      }
     }
   }, [])
 
@@ -2720,7 +2392,7 @@ export default function Main(props) {
                                                 key={size.key} 
                                                 style={styles.orderInfoHeader}
                                               >
-                                                {size["name"].substr(0, 1)} {"(" + order.quantity + ")"}
+                                                {size["name"].substr(0, 1)} {order.quantity > 1 && "(" + order.quantity + ")"}
                                               </Text>
                                             )}
                                             {order.quantities.length > 0 && order.quantities.map(quantity => 
@@ -2728,7 +2400,7 @@ export default function Main(props) {
                                                 key={quantity.key} 
                                                 style={styles.orderInfoHeader}
                                               >
-                                                {quantity["input"]} {"(" + order.quantity + ")"}
+                                                {quantity["input"]} {order.quantity > 1 && "(" + order.quantity + ")"}
                                               </Text>
                                             )}
                                             {order.percents.length > 0 && order.percents.map(percent => 
@@ -2870,7 +2542,7 @@ export default function Main(props) {
 
       {(
         scheduleOption.show || showInfo.show || showMoreoptions.show || showDisabledscreen || 
-        alertInfo.show || showPayment.show || showAddtable.show || showRemovetable.show || 
+        alertInfo.show || showPayment.show || showRemovetable.show || 
         showProductinfo.show || showCurrentorders.show || orderSentalert || showTableorders.show || showQr.show
       ) && (
         <Modal transparent={true}>
@@ -3162,16 +2834,6 @@ export default function Main(props) {
                       </TouchableOpacity>
 
                       <ScrollView showsVerticalScrollIndicator={false} style={{ width: '90%' }}>
-                        {(locationType == "hair" || locationType == "nail") && (
-                          <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
-                            setEditinfo({ ...editInfo, show: true, type: 'users' })
-                            setShowmoreoptions({ ...showMoreoptions, infoType: 'users' })
-                            getAllAccounts()
-                          }}>
-                            <Text style={styles.moreInfoTouchHeader}>{tr.t("main.hidden.showMoreoptions.changeStaffinfo")}</Text>
-                          </TouchableOpacity>
-                        )}
-
                         <TouchableOpacity style={styles.moreInfoTouch} onPress={() => {
                           setShowmoreoptions({ ...showMoreoptions, infoType: 'changelanguage' })
                           setEditinfo({ ...editInfo, show: true, type: 'changelanguage' })
@@ -3181,408 +2843,57 @@ export default function Main(props) {
                       </ScrollView>
                     </>
                     :
-                    <>
-                      {editInfo.show && (
-                        <View style={styles.editInfoBox}>
-                          <View style={styles.editInfoContainer}>
-                            <View style={{ marginTop: 5 }}>
-                              <TouchableOpacity style={styles.editInfoClose} onPress={() => {
-                                setShowmoreoptions({ ...showMoreoptions, infoType: '' })
+                    editInfo.show && (
+                      <View style={styles.editInfoBox}>
+                        <View style={styles.editInfoContainer}>
+                          <View style={{ marginTop: 5 }}>
+                            <TouchableOpacity style={styles.editInfoClose} onPress={() => {
+                              setShowmoreoptions({ ...showMoreoptions, infoType: '' })
 
-                                if (editInfo.type == 'login') {
-                                  setLogins({
-                                    owners: [], newOwner: false, 
-                                    info: { noAccount: false, cellnumber: '', verifyCode: "", verified: false, currentPassword: "", confirmPassword: "", userType: null },
-                                    errorMsg: ""
-                                  })
-                                } else {
-                                  setEditinfo({ ...editInfo, show: false, type: '' })
-                                }
-                              }}>
-                                <AntDesign name="closecircleo" size={wsize(10)}/>
-                              </TouchableOpacity>
-                            </View>
-
-                            {editInfo.type == 'changelanguage' && (
-                              <View style={styles.languages}>
-                                {language != "english" && (
-                                  <TouchableOpacity style={styles.language} onPress={() => pickLanguage('english')}>
-                                    <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.english")}</Text>
-                                  </TouchableOpacity>
-                                )}
-                                  
-                                {language != "french" && (
-                                  <TouchableOpacity style={styles.language} onPress={() => pickLanguage('french')}>
-                                    <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.french")}</Text>
-                                  </TouchableOpacity>
-                                )}
-
-                                {language != "vietnamese" && (
-                                  <TouchableOpacity style={styles.language} onPress={() => pickLanguage('vietnamese')}>
-                                    <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.vietnamese")}</Text>
-                                  </TouchableOpacity>
-                                )}
-
-                                {language != "chinese" && (
-                                  <TouchableOpacity style={styles.language} onPress={() => pickLanguage('chinese')}>
-                                    <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.chinese")}</Text>
-                                  </TouchableOpacity>
-                                )}
-                              </View>
-                            )}
-
-                            {editInfo.type == 'users' && (
-                              <ScrollView showsVerticalScrollIndicator={false}>
-                                <View style={styles.accountHolders}>
-                                  <Text style={styles.header}>{tr.t("main.editInfo.staff.header")}</Text>
-
-                                  {userType == "owner" && (
-                                    <TouchableOpacity style={styles.accountHoldersAdd} onPress={() => {
-                                      setAccountform({
-                                        ...accountForm,
-                                        show: true,
-                                        type: 'add',
-                                        username: ownerSigninInfo.username,
-                                        cellnumber: ownerSigninInfo.cellnumber,
-                                        currentPassword: ownerSigninInfo.password, 
-                                        newPassword: ownerSigninInfo.password, 
-                                        confirmPassword: ownerSigninInfo.password,
-                                        workerHours: [...hoursRange]
-                                      })
-                                      setEditinfo({ ...editInfo, show: false })
-                                    }}>
-                                      <Text style={styles.accountHoldersAddHeader}>{tr.t("main.editInfo.staff.add")}</Text>
-                                    </TouchableOpacity>
-                                  )}
-                                  
-                                  {accountHolders.map((info, index) => (
-                                    <View key={info.key} style={styles.account}>
-                                      <View style={styles.row}>
-                                        <View style={styles.column}>
-                                          <Text style={styles.accountHeader}>#{index + 1}:</Text>
-                                        </View>
-
-                                        <View style={styles.accountEdit}>
-                                          <View style={styles.column}>
-                                            <View style={styles.accountEditProfile}>
-                                              <Image 
-                                                source={info.profile.name ? { uri: logo_url + info.profile.name } : require("../../assets/profilepicture.jpeg")}
-                                                style={resizePhoto(info.profile, wsize(20))}
-                                              />
-                                            </View>
-                                          </View>
-
-                                          <View style={styles.column}><Text style={styles.accountEditHeader}>{info.username}</Text></View>
-
-                                          {(locationType == "hair" || locationType == "nail") && (
-                                            userType == "owner" && (
-                                              <View style={styles.column}>
-                                                <TouchableOpacity onPress={() => deleteTheOwner(info.id)}>
-                                                  <AntDesign color="black" name="closecircleo" size={wsize(7)}/>
-                                                </TouchableOpacity>
-                                              </View>
-                                            )
-                                          )}
-                                        </View>
-                                      </View>
-
-                                      {(locationType == "hair" || locationType == "nail") && (
-                                        <View style={styles.column}>
-                                          <TouchableOpacity style={styles.accountEditTouch} onPress={() => {
-                                            if (info.id == ownerId) {
-                                              setAccountform({
-                                                ...accountForm,
-                                                show: true, type: 'edit', 
-                                                id: info.id, self: true,
-                                                username: info.username,
-                                                cellnumber: info.cellnumber,
-                                                password: '',
-                                                confirmPassword: '',
-                                                profile: { 
-                                                  ...accountForm.profile,  
-                                                  uri: info.profile.name ? logo_url + info.profile.name : "",
-                                                  name: info.profile.name ? info.profile.name : "",
-                                                  size: { width: info.profile.width, height: info.profile.height }
-                                                },
-                                                workerHours: info.hours
-                                              })
-                                            } else { // others can only edit other's hours
-                                              setAccountform({ 
-                                                ...accountForm, 
-                                                show: true, type: '', editType: 'hours', 
-                                                id: info.id, self: false,
-                                                workerHours: info.hours, editHours: true
-                                              })
-                                            }
-
-                                            setEditinfo({ ...editInfo, show: false })
-                                          }}>
-                                            <Text style={styles.accountEditTouchHeader}>
-                                              {tr.t("main.editInfo.staff.change." + (ownerId == info.id ? "self" : "other"))}
-                                            </Text>
-                                          </TouchableOpacity>
-                                        </View>
-                                      )}
-                                    </View>
-                                  ))}
-                                </View>
-                              </ScrollView>
-                            )}
-                          </View>
-                        </View>
-                      )}
-                      {accountForm.show && (
-                        <>
-                          <ScrollView style={{ height: '100%', width: '100%' }}>
-                            <KeyboardAvoidingView behavior={Platform.OS == "ios" ? "padding" : "position"} key={accountForm.addStep}>
-                              {(!accountForm.editCellnumber && !accountForm.editUsername && !accountForm.editProfile && !accountForm.editPassword && !accountForm.editHours && accountForm.type == 'edit') ? 
-                                <>
-                                  <View style={{ alignItems: 'center', marginVertical: 10 }}>
-                                    <TouchableOpacity onPress={() => {
-                                      setAccountform({
-                                        ...accountForm,
-                                        show: false,
-                                        username: '',
-                                        cellnumber: '', password: '', confirmPassword: '',
-                                        profile: { uri: '', name: '', size: { width: 0, height: 0 }},
-                                        errorMsg: ""
-                                      })
-                                      setEditinfo({ ...editInfo, show: true })
-                                    }}>
-                                      <AntDesign name="closecircleo" size={wsize(7)}/>
-                                    </TouchableOpacity>
-                                  </View>
-
-                                  <Text style={styles.accountformHeader}>{tr.t("main.editingInfo.header." + accountForm.type)}</Text>
-
-                                  {accountForm.id == ownerId ? 
-                                    <View style={{ alignItems: 'center' }}>
-                                      <TouchableOpacity style={styles.accountInfoEdit} onPress={() => setAccountform({ ...accountForm, editCellnumber: true, editType: 'cellnumber' })}>
-                                        <Text style={styles.accountInfoEditHeader}>{tr.t("main.editingInfo.changeCellnumber")}</Text>
-                                      </TouchableOpacity>
-
-                                      <TouchableOpacity style={styles.accountInfoEdit} onPress={() => setAccountform({ ...accountForm, editUsername: true, editType: 'username' })}>
-                                        <Text style={styles.accountInfoEditHeader}>{tr.t("main.editingInfo.changeName")}</Text>
-                                      </TouchableOpacity>
-
-                                      <TouchableOpacity style={styles.accountInfoEdit} onPress={() => setAccountform({ ...accountForm, editProfile: true, editType: 'profile' })}>
-                                        <Text style={styles.accountInfoEditHeader}>{tr.t("main.editingInfo.changeProfile")}</Text>
-                                      </TouchableOpacity>
-
-                                      <TouchableOpacity style={styles.accountInfoEdit} onPress={() => setAccountform({ ...accountForm, editPassword: true, editType: 'password' })}>
-                                        <Text style={styles.accountInfoEditHeader}>{tr.t("main.editingInfo.changePassword")}</Text>
-                                      </TouchableOpacity>
-
-                                      {(locationType == "hair" || locationType == "nail") && (
-                                        <TouchableOpacity style={styles.accountInfoEdit} onPress={() => setAccountform({ ...accountForm, editHours: true, editType: 'hours' })}>
-                                          <Text style={styles.accountInfoEditHeader}>{tr.t("main.editingInfo.changeWorking")}</Text>
-                                        </TouchableOpacity>
-                                      )}
-                                    </View>
-                                    :
-                                    <>
-                                      {accountForm.workerHours.map((info, index) => (
-                                        <View key={index} style={styles.workerHour}>
-                                          {info.working == true ? 
-                                            <>
-                                              <View>
-                                                <Text style={styles.workerHourHeader}>Your hours on {tr.t("days." + info.header)}</Text>
-                                                <View style={styles.timeSelectionContainer}>
-                                                  <View style={styles.timeSelection}>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "hour", "up", true)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <TextInput style={styles.selectionHeader} onChangeText={(hour) => {
-                                                        const newWorkerhours = [...accountForm.workerHours]
-
-                                                        newWorkerhours[index].opentime["hour"] = hour.toString()
-
-                                                        setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                                      }} keyboardType="numeric" maxLength={2} value={info.opentime.hour}/>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "hour", "down", true)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                    <View style={styles.column}>
-                                                      <Text style={styles.selectionDiv}>:</Text>
-                                                    </View>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "minute", "up", true)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <TextInput style={styles.selectionHeader} onChangeText={(minute) => {
-                                                        const newWorkerhours = [...accountForm.workerHours]
-
-                                                        newWorkerhours[index].opentime["minute"] = minute.toString()
-
-                                                        setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                                      }} keyboardType="numeric" maxLength={2} value={info.opentime.minute}/>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "minute", "down", true)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "period", "up", true)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <Text style={styles.selectionHeader}>{info.opentime.period}</Text>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "period", "down", true)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                  </View>
-                                                  <View style={styles.column}>
-                                                    <Text style={styles.timeSelectionHeader}>To</Text>
-                                                  </View>
-                                                  <View style={styles.timeSelection}>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "hour", "up", false)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <TextInput style={styles.selectionHeader} onChangeText={(hour) => {
-                                                        const newWorkerhours = [...accountForm.workerHours]
-
-                                                        newWorkerhours[index].closetime["hour"] = hour.toString()
-
-                                                        setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                                      }} keyboardType="numeric" maxLength={2} value={info.closetime.hour}/>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "hour", "down", false)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                    <View style={styles.column}>
-                                                      <Text style={styles.selectionDiv}>:</Text>
-                                                    </View>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "minute", "up", false)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <TextInput style={styles.selectionHeader} onChangeText={(minute) => {
-                                                        const newWorkerhours = [...accountForm.workerHours]
-
-                                                        newWorkerhours[index].closetime["minute"] = minute.toString()
-
-                                                        setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                                      }} keyboardType="numeric" maxLength={2} value={info.closetime.minute}/>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "minute", "down", false)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                    <View style={styles.selection}>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "period", "up", false)}>
-                                                        <AntDesign name="up" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                      <Text style={styles.selectionHeader}>{info.closetime.period}</Text>
-                                                      <TouchableOpacity onPress={() => updateWorkingHour(index, "period", "down", false)}>
-                                                        <AntDesign name="down" size={wsize(7)}/>
-                                                      </TouchableOpacity>
-                                                    </View>
-                                                  </View>
-                                                </View>
-                                              </View>
-                                              <TouchableOpacity style={styles.workerHourAction} onPress={() => {
-                                                const newWorkerhours = [...accountForm.workerHours]
-
-                                                newWorkerhours[index].working = false
-
-                                                setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                              }}>
-                                                <Text style={styles.workerHourActionHeader}>No service</Text>
-                                              </TouchableOpacity>
-                                            </>
-                                            :
-                                            <>
-                                              <Text style={styles.workerHourHeader}><Text style={{ fontWeight: '300' }}>Not working on</Text> {tr.t("days." + info.header)}</Text>
-
-                                              <View style={styles.workerHourActions}>
-                                                <TouchableOpacity style={styles.workerHourAction} onPress={() => {
-                                                  const newWorkerhours = [...accountForm.workerHours]
-
-                                                  newWorkerhours[index].working = true
-
-                                                  setAccountform({ ...accountForm, workerHours: newWorkerhours })
-                                                }}>
-                                                  <Text style={styles.workerHourActionHeader}>Will work</Text>
-                                                </TouchableOpacity>
-
-                                                {info.takeShift != "" ? 
-                                                  <TouchableOpacity style={styles.workerHourAction} onPress={() => cancelTheShift(info.header.substr(0, 3))}>
-                                                    <Text style={styles.workerHourActionHeader}>Cancel shift</Text>
-                                                  </TouchableOpacity>
-                                                  :
-                                                  <TouchableOpacity style={styles.workerHourAction} onPress={() => getTheOtherWorkers(info.header.substr(0, 3))}>
-                                                    <Text style={styles.workerHourActionHeader}>Take co-worker's shift</Text>
-                                                  </TouchableOpacity>
-                                                }
-                                              </View>
-                                            </>
-                                          }
-                                        </View>
-                                      ))}
-
-                                      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-                                        <View style={{ flexDirection: 'row' }}>
-                                          <TouchableOpacity style={[styles.accountformSubmit, { opacity: accountForm.loading ? 0.3 : 1 }]} disabled={accountForm.loading} onPress={() => setAccountform({ ...accountForm, show: false, type: 'edit', editType: '', id: -1, editHours: false })}>
-                                            <Text style={styles.accountformSubmitHeader}>{tr.t("buttons.cancel")}</Text>
-                                          </TouchableOpacity>
-                                          <TouchableOpacity style={[styles.accountformSubmit, { opacity: accountForm.loading ? 0.3 : 1 }]} disabled={accountForm.loading} onPress={() => {
-                                            if (accountForm.type == 'add') {
-                                              addNewOwner()
-                                            } else {
-                                              updateTheOwner()
-                                            }
-                                          }}>
-                                            <Text style={styles.accountformSubmitHeader}>{accountForm.type == 'add' ? tr.t("buttons.add") : tr.t("buttons.update")} Account</Text>
-                                          </TouchableOpacity>
-                                        </View>
-                                      </View>
-                                    </>
-                                  }
-
-                                  {accountForm.errormsg ? <Text style={styles.errorMsg}>{accountForm.errormsg}</Text> : null}
-                                  {accountForm.loading ? <ActivityIndicator marginBottom={10} size="small"/> : null}
-                                </>
-                                :
-                                <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-
-                                </TouchableWithoutFeedback>
+                              if (editInfo.type == 'login') {
+                                setLogins({
+                                  owners: [], newOwner: false, 
+                                  info: { noAccount: false, cellnumber: '', verifyCode: "", verified: false, currentPassword: "", confirmPassword: "", userType: null },
+                                  errorMsg: ""
+                                })
+                              } else {
+                                setEditinfo({ ...editInfo, show: false, type: '' })
                               }
-                            </KeyboardAvoidingView>
-                          </ScrollView>
+                            }}>
+                              <AntDesign name="closecircleo" size={wsize(10)}/>
+                            </TouchableOpacity>
+                          </View>
 
-                          {getWorkersbox.show && (
-                            <Modal transparent={true}>
-                              <View style={styles.workersBox}>
-                                <View style={styles.workersContainer}>
-                                  <TouchableOpacity style={styles.workersClose} onPress={() => setGetworkersbox({ ...getWorkersbox, show: false })}>
-                                    <AntDesign color="black" size={wsize(7)} name="closecircleo"/>
-                                  </TouchableOpacity>
-                                  {getWorkersbox.workers.map(info => (
-                                    <View key={info.key} style={styles.row}>
-                                      {info.row.map(worker => (
-                                        worker.id ? 
-                                          <TouchableOpacity key={worker.key} style={styles.worker} onPress={() => selectTheOtherWorker(worker)}>
-                                            <View style={styles.workerProfile}>
-                                              <Image 
-                                                style={resizePhoto(worker.profile, wsize(20))} 
-                                                source={worker.profile.name ? { uri: logo_url + worker.profile.name } : require("../../assets/profilepicture.jpeg")}
-                                              />
-                                            </View>
-                                            <Text style={styles.workerUsername}>{worker.username}</Text>
-                                          </TouchableOpacity>
-                                          :
-                                          <View key={worker.key} style={styles.worker}></View>
-                                      ))}
-                                    </View>
-                                  ))}
-                                </View>
-                              </View>
-                            </Modal>
+                          {editInfo.type == 'changelanguage' && (
+                            <View style={styles.languages}>
+                              {language != "english" && (
+                                <TouchableOpacity style={styles.language} onPress={() => pickLanguage('english')}>
+                                  <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.english")}</Text>
+                                </TouchableOpacity>
+                              )}
+                                
+                              {language != "french" && (
+                                <TouchableOpacity style={styles.language} onPress={() => pickLanguage('french')}>
+                                  <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.french")}</Text>
+                                </TouchableOpacity>
+                              )}
+
+                              {language != "vietnamese" && (
+                                <TouchableOpacity style={styles.language} onPress={() => pickLanguage('vietnamese')}>
+                                  <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.vietnamese")}</Text>
+                                </TouchableOpacity>
+                              )}
+
+                              {language != "chinese" && (
+                                <TouchableOpacity style={styles.language} onPress={() => pickLanguage('chinese')}>
+                                  <Text style={styles.languageHeader}>{tr.t("main.editingLanguage.chinese")}</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           )}
-                        </>
-                      )}
-                    </>
+                        </View>
+                      </View>
+                    )
                   }
                 </View>
               </View>
@@ -4006,8 +3317,6 @@ const styles = StyleSheet.create({
   orderInfoHeader: { color: 'white', fontSize: wsize(3), fontWeight: 'bold', textAlign: 'center' },
   seeOrders: { alignItems: 'center', backgroundColor: 'black', borderRadius: 10, flexDirection: 'row', justifyContent: 'space-around', marginVertical: 2, padding: 10 },
   seeOrdersHeader: { color: 'white', fontSize: wsize(6), fontWeight: 'bold', textAlign: 'center' },
-  addTable: { borderRadius: 5, borderStyle: 'solid', borderWidth: 2, marginBottom: 20, padding: 5 },
-  addTableHeader: { fontSize: wsize(5), textAlign: 'center' },
 
   tableBill: { backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 5, flexDirection: 'row', justifyContent: 'space-between', margin: '2%', padding: 5 },
   tableBillHeader: { fontSize: wsize(5), fontWeight: 'bold', marginHorizontal: 10 },
@@ -4118,10 +3427,6 @@ const styles = StyleSheet.create({
   editInfoContainer: { alignItems: 'center', backgroundColor: 'white', height: '100%', width: '100%' },
   editInfoClose: { height: wsize(10), width: wsize(10) },
 
-  accountHolders: { alignItems: 'center', marginHorizontal: 10, marginTop: 20 },
-  accountHoldersHeader: { fontFamily: 'Chilanka_400Regular', fontSize: wsize(30), textAlign: 'center' },
-  accountHoldersAdd: { alignItems: 'center', borderRadius: 5, borderStyle: 'solid', borderWidth: 2, marginVertical: 3, padding: 5 },
-  accountHoldersAddHeader: { fontSize: wsize(5) },
   account: { alignItems: 'center', marginBottom: 50 },
   accountHeader: { fontSize: wsize(4), fontWeight: 'bold', padding: 5 },
   accountEdit: { backgroundColor: 'rgba(127, 127, 127, 0.3)', borderRadius: 4, flexDirection: 'row', justifyContent: 'space-around', width: '90%' },

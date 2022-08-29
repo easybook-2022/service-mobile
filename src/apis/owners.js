@@ -3,17 +3,6 @@ import { url } from '../../assets/info'
 
 const beginUrl = `${url}/owners/`
 
-export const verifyUser = cellnumber => {
-	return axios.get(`${beginUrl}owner_verify/${cellnumber}`)
-}
-
-export const updateLogins = data => {
-  return axios.post(
-    `${beginUrl}update_logins`,
-    data
-  )
-}
-
 export const loginUser = data => {
 	return axios.post(
 		`${beginUrl}owner_login`,
@@ -21,112 +10,22 @@ export const loginUser = data => {
 	)
 }
 
-export const logoutUser = id => {
-  return axios.get(`${beginUrl}owner_logout/${id}`)
-}
+export const logoutUser = data => {
+  const { ownerid, cancelToken } = data
 
-export const registerUser = data => {
-  return axios.post(
-    `${beginUrl}owner_register`,
-    data
+  return axios.get(
+    `${beginUrl}owner_logout/${ownerid}`,
+    { cancelToken }
   )
 }
 
-export const saveUserInfo = data => {
-  const form = new FormData()
-  const { uri, name, type = "image/jpeg", size } = data.profile
-  
-  form.append("id", data.id)
-  form.append("username", data.username)
+export const getAllStylists = data => {
+  const { locationid, cancelToken } = data
 
-  if (data.profile.uri.includes("file")) {
-    form.append("profile", { uri, name, type })
-    form.append("size", JSON.stringify(size))
-  }
-
-  form.append("hours", JSON.stringify(data.hours))
-
-  return axios.post(
-    `${beginUrl}save_user_info`,
-    form
+  return axios.get(
+    `${beginUrl}get_all_stylists/${locationid}`,
+    { cancelToken }
   )
-}
-
-export const addOwner = data => {
-	const form = new FormData()
-	const { uri, name, type = "image/jpeg", size } = data.profile
-
-	form.append("id", data.id)
-	form.append("cellnumber", data.cellnumber)
-	form.append("username", data.username)
-	form.append("password", data.password)
-	form.append("confirmPassword", data.confirmPassword)
-	form.append("hours", JSON.stringify(data.hours))
-
-	if (data.profile.uri.includes("file")) {
-		form.append("profile", { uri, name, type })
-    form.append("size", JSON.stringify(size))
-	}
-
-	return axios.post(
-		`${beginUrl}add_owner`,
-		form
-	)
-}
-
-export const updateOwner = data => {
-	const form = new FormData()
-
-  form.append("ownerid", data.ownerid)
-  form.append("type", data.type)
-
-  switch (data.type) {
-    case "cellnumber":
-      form.append("cellnumber", data.cellnumber)
-
-      break;
-    case "username":
-      form.append("username", data.username)
-
-      break;
-    case "profile":
-      const { uri, name, type = "image/jpeg", size } = data.profile
-
-      if (data.profile.uri.includes("file")) {
-        form.append("profile", { uri, name, type })
-        form.append("size", JSON.stringify(size))
-      }
-
-      break;
-    case "password":
-      form.append("currentPassword", data.currentPassword)
-      form.append("newPassword", data.newPassword)
-      form.append("confirmPassword", data.confirmPassword)
-
-      break;
-    case "hours":
-      form.append("hours", JSON.stringify(data.hours))
-
-      break;
-    default:
-  }
-
-	return axios.post(
-		`${beginUrl}update_owner`,
-		form
-	)
-}
-
-export const deleteOwner = id => {
-  return axios.get(`${beginUrl}delete_owner/${id}`)
-}
-
-export const getWorkers = id => {
-  return axios.get(`${beginUrl}get_workers/${id}`)
-}
-
-export const getAllStylists = id => {
-  return axios.get(`${beginUrl}get_all_stylists/${id}`)
 }
 
 export const getAllWorkingStylists = data => {
@@ -136,31 +35,27 @@ export const getAllWorkingStylists = data => {
   )
 }
 
-export const getStylistInfo = id => {
-  return axios.get(`${beginUrl}get_stylist_info/${id}`)
+export const getStylistInfo = data => {
+  const { workerid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_stylist_info/${workerid}`,
+    { cancelToken }
+  )
 }
 
-export const getAllWorkersTime = id => {
-  return axios.get(`${beginUrl}get_all_workers_time/${id}`)
+export const getAllWorkersTime = data => {
+  const { locationid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_all_workers_time/${locationid}`,
+    { cancelToken }
+  )
 }
 
 export const getWorkersHour = data => {
   return axios.post(
     `${beginUrl}get_workers_hour`,
-    data
-  )
-}
-
-export const switchAccount = data => {
-  return axios.post(
-    `${beginUrl}/switch_account`,
-    data
-  )
-}
-
-export const verifySwitchAccount = data => {
-  return axios.post(
-    `${beginUrl}/verify_switch_account`,
     data
   )
 }
@@ -172,18 +67,12 @@ export const getOtherWorkers = data => {
   )
 }
 
-export const getWorkersTime = id => {
-  return axios.get(`${beginUrl}get_workers_time/${id}`)
-}
+export const getWorkersTime = data => {
+  const { locationid, cancelToken } = data
 
-export const getOwnerInfo = id => {
-  return axios.get(`${beginUrl}get_owner_info/${id}`)
-}
-
-export const setOwnerHours = data => {
-  return axios.post(
-    `${beginUrl}set_owner_hours`,
-    data
+  return axios.get(
+    `${beginUrl}get_workers_time/${locationid}`,
+    { cancelToken }
   )
 }
 
@@ -194,12 +83,13 @@ export const updateNotificationToken = data => {
 	)
 }
 
-export const getAccounts = id => {
-	return axios.get(`${beginUrl}get_accounts/${id}`)
-}
+export const getAccounts = data => {
+  const { locationid, cancelToken } = data
 
-export const getCode = cellnumber => {
-	return axios.get(`${beginUrl}get_reset_code/${cellnumber}`)
+	return axios.get(
+    `${beginUrl}get_accounts/${locationid}`,
+    { cancelToken }
+  )
 }
 
 export const resetPassword = data => {

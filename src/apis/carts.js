@@ -3,8 +3,13 @@ import { url } from '../../assets/info'
 
 const beginUrl = `${url}/carts/`
 
-export const getCartOrderers = id => {
-  return axios.get(`${beginUrl}get_cart_orderers/${id}`)
+export const getCartOrderers = data => {
+  const { locationid, cancelToken } = data
+
+  return axios.get(
+    `${beginUrl}get_cart_orderers/${locationid}`,
+    { cancelToken }
+  )
 }
 
 export const orderDone = data => {
