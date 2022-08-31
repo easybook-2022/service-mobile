@@ -57,9 +57,9 @@ export default function Locationslist(props) {
   }
 
   useEffect(() => {
-    if (!loaded) getTheAllLocations()
-
     source = axios.CancelToken.source();
+    
+    if (!loaded) getTheAllLocations()
 
     return () => {
       if (source) {

@@ -31,17 +31,14 @@ export default function Walkin({ navigation }) {
   const [hoursInfo, setHoursinfo] = useState({})
   const [allStylists, setAllstylists] = useState({ stylists: [], numStylists: 0, ids: [] })
   const [allWorkerstime, setAllworkerstime] = useState({})
-  const [requestInfo, setRequestinfo] = useState({ show: false, search: '', error: false })
-  const [menuInfo, setMenuinfo] = useState({ list: [], photos: [] })
+  const [menus, setMenus] = useState([])
   const [scheduled, setScheduled] = useState({})
-  const [confirm, setConfirm] = useState({ show: false, worker: -1, search: "", serviceInfo: null, showClientInput: false, clientName: "", cellnumber: "", confirm: false, timeDisplay: "" })
+  const [confirm, setConfirm] = useState({ show: false, worker: -1, info: null, showClientInput: false, clientName: "", cellnumber: "", confirm: false, timeDisplay: "" })
   const [loaded, setLoaded] = useState(false)
 
-  const getAllTheWorkingStylists = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const locationtype = await AsyncStorage.getItem("locationtype")
+  const getAllTheWorkingStylists = () => {
     const date = new Date(Date.now()), day = days[date.getDay()].substr(0, 3), hour = date.getHours().toString(), minute = date.getMinutes()
-    const data = { locationid, day, hour, minute: minute < 10 ? "0" + minute : minute.toString(), cancelToken: source.token }
+    const data = { locationid: locationId, day, hour, minute: minute < 10 ? "0" + minute : minute.toString(), cancelToken: source.token }
 
     getAllWorkingStylists(data)
       .then((res) => {
@@ -52,8 +49,6 @@ export default function Walkin({ navigation }) {
       .then((res) => {
         if (res) {
           setAllstylists({ ...allStylists, stylists: res.stylists, numStylists: res.numStylists, ids: res.ids })
-          setLocationid(locationid)
-          setType(locationtype)
         }
       })
       .catch((err) => {
@@ -62,9 +57,8 @@ export default function Walkin({ navigation }) {
         }
       })
   }
-  const getTheLocationProfile = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, cancelToken: source.token }
+  const getTheLocationProfile = () => {
+    const data = { locationid: locationId, cancelToken: source.token }
 
     getLocationProfile(data)
       .then((res) => {
@@ -83,9 +77,8 @@ export default function Walkin({ navigation }) {
         }
       })
   }
-  const getTheLocationHours = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, cancelToken: source.token }
+  const getTheLocationHours = () => {
+    const data = { locationid: locationId, cancelToken: source.token }
 
     getLocationHours(data)
       .then((res) => {
@@ -106,30 +99,28 @@ export default function Walkin({ navigation }) {
         }
       })
   }
-  const getAllTheWorkersTime = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, cancelToken: source.token }
+  const getAllTheWorkersTime = () => {
+    const data = { locationid: locationId, cancelToken: source.token }
     
     getAllWorkersTime(data)
-    .then((res) => {
-      if (res.status == 200) {
-        return res.data
-      }
-    })
-    .then((res) => {
-      if (res) {
-        setAllworkerstime(res.workers)
-      }
-    })
-    .catch((err) => {
-      if (err.response && err.response.status == 400) {
-        const { errormsg, status } = err.response.data
-      }
-    })
+      .then((res) => {
+        if (res.status == 200) {
+          return res.data
+        }
+      })
+      .then((res) => {
+        if (res) {
+          setAllworkerstime(res.workers)
+        }
+      })
+      .catch((err) => {
+        if (err.response && err.response.status == 400) {
+          const { errormsg, status } = err.response.data
+        }
+      })
   }
   const getAllScheduledTimes = async() => {
-    const locationid = await AsyncStorage.getItem("locationid")
-    const data = { locationid, ownerid: null, cancelToken: source.token }
+    const data = { locationid: locationId, ownerid: null, cancelToken: source.token }
 
     getWorkersHour(data)
       .then((res) => {
@@ -140,18 +131,17 @@ export default function Walkin({ navigation }) {
       .then((res) => {
         if (res) {
           const { workersHour } = res
+          const newScheduled = {}
 
           for (let worker in workersHour) {
             for (let info in workersHour[worker]) {
               if (info == "scheduled") {
-                const newScheduled = {}
-
                 for (let info in workersHour[worker]["scheduled"]) {
                   let splitTime = info.split("-")
                   let time = splitTime[0]
                   let status = splitTime[1]
                   
-                  newScheduled[jsonDateToUnix(JSON.parse(time))] = workersHour[worker]["scheduled"][info]
+                  newScheduled[jsonDateToUnix(JSON.parse(time)) + "-" + worker + "-" + status] = workersHour[worker]["scheduled"][info]
                 }
 
                 workersHour[worker]["scheduled"] = newScheduled
@@ -170,7 +160,7 @@ export default function Walkin({ navigation }) {
       })
   }
   const selectWorker = id => {
-    const data = { id, cancelToken: source.token }
+    const data = { workerid: id, cancelToken: source.token }
 
     getStylistInfo(data)
       .then((res) => {
@@ -202,7 +192,7 @@ export default function Walkin({ navigation }) {
       })
       .then((res) => {
         if (res) {
-          setMenuinfo({ ...menuInfo, list: res.list, photos: res.photos })
+          setMenus(res.list)
         }
       })
       .catch((err) => {
@@ -213,7 +203,7 @@ export default function Walkin({ navigation }) {
   }
   const displayListItem = info => {
     return (
-      <View style={styles.item}>
+      <TouchableOpacity style={styles.item} onPress={() => bookTheWalkIn(info)}>
         <View style={{ flexDirection: 'row', width: '100%' }}>
           {info.image.name && (
             <View style={{ width: '25%' }}>
@@ -229,12 +219,12 @@ export default function Walkin({ navigation }) {
             <Text style={styles.itemHeader}>{info.name}</Text>
             <Text style={styles.itemMiniHeader}>{info.description}</Text>
             <Text style={styles.itemHeader}>$ {info.price}</Text>
-            <TouchableOpacity style={styles.itemAction} onPress={() => bookTheWalkIn(info)}>
+            <View style={styles.itemAction}>
               <Text style={styles.itemActionHeader}>Pick</Text>
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     )
   }
   const displayList = info => {
@@ -245,7 +235,7 @@ export default function Walkin({ navigation }) {
         {name ?
           <View style={styles.menu}>
             <TouchableOpacity style={{ flexDirection: 'row' }} onPress={() => {
-              const newList = [...menuInfo.list]
+              const newList = [...menus]
 
               const toggleMenu = list => {
                 list.forEach(function (item) {
@@ -263,7 +253,7 @@ export default function Walkin({ navigation }) {
 
               toggleMenu(newList)
 
-              setMenuinfo({ ...menuInfo, list: newList })
+              setMenus(newList)
             }}>
               {image.name && (
                 <View style={styles.menuImageHolder}>
@@ -301,17 +291,16 @@ export default function Walkin({ navigation }) {
       </View>
     )
   }
-  const bookTheWalkIn = serviceInfo => {
+  const bookTheWalkIn = info => {
     if (!confirm.show) {
       let { id, username } = selectedWorkerinfo
-      const { search } = requestInfo
 
-      setConfirm({ ...confirm, show: true, worker: { id, username }, search, serviceInfo })
+      setConfirm({ ...confirm, show: true, worker: { id, username }, info })
     } else {
-      const { worker, search, serviceInfo, clientName } = confirm
+      const { worker, info, clientName } = confirm
       const time = new Date(Date.now()), hour = time.getHours().toString(), minute = time.getMinutes().toString()
       const jsonDate = { "day":days[time.getDay()],"month":months[time.getMonth()],"date":time.getDate(),"year":time.getFullYear() }
-      let bM = "0", eM = "10", bH = parseInt(hour), eH = parseInt(hour), bTime = "", eTime = ""
+      let bM = "0", eM = "10", bH = parseInt(hour), eH = parseInt(hour), bTime = "", eTime = "", eMone, eMtwo
 
       if (minute >= 10) {
         bM = minute.substr(0, 1)
@@ -345,12 +334,9 @@ export default function Walkin({ navigation }) {
         time: jsonDate, bTime, eTime,
         unix: jsonDateToUnix(jsonDate),
         note: "", type, 
-        client: {
-          service: !serviceInfo ? search : "",
-          type: !serviceInfo ? "service" : "",
-          name: clientName
-        }, 
-        serviceid: serviceInfo ? serviceInfo.id : null,
+        client: clientName, 
+        type: "bookWalkIn",
+        menuid: info.parentId, serviceid: info.id,
         cancelToken: source.token
       }
 
@@ -362,7 +348,7 @@ export default function Walkin({ navigation }) {
         })
         .then((res) => {
           if (res) {
-            data = { ...data, receiver: res.receiver }
+            data = { ...data, receiver: res.receiver, receiveType: res.receiveType }
 
             socket.emit("socket/business/bookWalkIn", data, () => {
               setConfirm({ ...confirm, showClientInput: false, timeDisplay: res.timeDisplay })
@@ -396,17 +382,33 @@ export default function Walkin({ navigation }) {
     return Date.parse(date["day"] + " " + date["month"] + " " + date["date"] + " " + date["year"] + " " + date["hour"] + ":" + date["minute"])
   }
 
-  const initialize = () => {
+  const initialize = async() => {
+    const locationid = await AsyncStorage.getItem("locationid")
+    const locationtype = await AsyncStorage.getItem("locationtype")
+
+    setLocationid(locationid)
+    setType(locationtype)
+
     getTheLocationProfile()
     getTheLocationHours()
     getAllTheWorkersTime()
     getAllScheduledTimes()
   }
 
-  useEffect(() => initialize(), [])
+  useEffect(() => {
+    source = axios.CancelToken.source();
+
+    initialize()
+
+    return () => {
+      if (source) {
+        source.cancel("components got unmounted");
+      }
+    }
+  }, [])
 
   useEffect(() => {
-    getAllTheWorkingStylists()
+    if (step == 1) getAllTheWorkingStylists()
   }, [step == 1])
 
   return (
@@ -472,10 +474,10 @@ export default function Walkin({ navigation }) {
           </View>
         )}
 
-        {(step == 2 && (menuInfo.photos.length > 0 || menuInfo.list.length > 0)) && (
+        {(step == 2 && menus.length > 0) && (
           <>
             <ScrollView style={{ height: '90%', width: '100%' }}>
-              <View style={{ marginHorizontal: width * 0.025 }}>{displayList({ id: "", name: "", image: "", list: menuInfo.list })}</View>
+              <View style={{ marginHorizontal: width * 0.025 }}>{displayList({ id: "", name: "", image: "", list: menus })}</View>
             </ScrollView>
 
             <View style={styles.actions}>
@@ -496,7 +498,7 @@ export default function Walkin({ navigation }) {
         </View>
       </View>
 
-      {(confirm.show || requestInfo.show) && (
+      {confirm.show && (
         <Modal transparent={true}>
           <SafeAreaView style={{ flex: 1 }}>
             {confirm.show && (
@@ -508,9 +510,7 @@ export default function Walkin({ navigation }) {
                         <View style={styles.bookWalkInHeaders}>
                           <Text style={styles.bookWalkInHeader}>Confirming....</Text>
 
-                          <Text style={[styles.bookWalkInHeader, { marginTop: '10%' }]}>
-                            {confirm.serviceInfo ? confirm.serviceInfo.name : confirm.search}
-                          </Text>
+                          <Text style={[styles.bookWalkInHeader, { marginTop: '10%' }]}>{confirm.info.name}</Text>
 
                           <Text style={styles.bookWalkInHeader}>Stylist: {confirm.worker.username}</Text>
                         </View>
@@ -547,68 +547,6 @@ export default function Walkin({ navigation }) {
                 </TouchableWithoutFeedback>
               </View>
             )}
-
-            {requestInfo.show && (
-              <View style={styles.serviceInputBox}>
-                <View style={styles.serviceInputHeader}>
-                  <TouchableOpacity onPress={() => setRequestinfo({ ...requestInfo, show: false })}>
-                    <AntDesign color="white" name="closecircleo" size={30}/>
-                  </TouchableOpacity>
-
-                  {(menuInfo.photos.length > 0 || menuInfo.list.length > 0) && (
-                    <>
-                      <View style={styles.menuInputBox}>
-                        <TextInput 
-                          style={styles.menuInput} type="text" 
-                          placeholder={
-                            "Enter " + 
-                            (type == "restaurant" && "meal" || type == "store" && "product" || (type == "hair" || type == "nail") && "service") 
-                            + " # or name"
-                          } 
-                          placeholderTextColor="rgba(0, 0, 0, 0.5)"
-                          onChangeText={(info) => setRequestinfo({ ...requestInfo, search: info, error: false })} maxLength={37} autoCorrect={false} autoCapitalize="none"
-                        />
-                        <View style={styles.menuInputActions}>
-                          <TouchableOpacity style={styles.menuInputTouch} onPress={() => {
-                            if (requestInfo.search) {
-                              setRequestinfo({ ...requestInfo, show: false })
-
-                              bookTheWalkIn()
-                            } else {
-                              setRequestinfo({ ...requestInfo, error: true })
-                            }
-                          }}>
-                            <Text style={styles.menuInputTouchHeader}>Next</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      {requestInfo.error && <Text style={styles.errorMsg}>Your request is empty</Text>}
-                    </>
-                  )}
-                </View>
-
-                <View style={styles.menuPhotos}>
-                  <ScrollView>
-                    {menuInfo.photos.length > 0 && ( 
-                      menuInfo.photos[0].row && (
-                        menuInfo.photos.map(info => (
-                          info.row.map(item => (
-                            item.photo && item.photo.name && (
-                              <View key={item.key} style={[styles.menuPhoto, resizePhoto(item.photo, wsize(95)), { borderRadius: wsize(95) / 2 }]}>
-                                <Image 
-                                  style={{ width: '100%', height: '100%' }}
-                                  source={{ uri: logo_url + item.photo.name }}
-                                />
-                              </View>
-                            )
-                          ))
-                        ))
-                      )
-                    )}
-                  </ScrollView>
-                </View>
-              </View>
-            )}
           </SafeAreaView>
         </Modal>
       )}
@@ -641,19 +579,6 @@ const styles = StyleSheet.create({
   selectedWorker: { marginVertical: 10 },
   selectedWorkerImage: { borderRadius: wsize(20) / 2, height: wsize(20), width: wsize(20) },
   selectedWorkerHeader: { fontSize: wsize(4), fontWeight: 'bold', textAlign: 'center' },
-
-  openInput: { borderRadius: 3, borderStyle: 'solid', borderWidth: 2, fontSize: wsize(5), margin: 5, padding: 10, width: '40%' },
-  openInputHeader: { fontSize: wsize(4), textAlign: 'center' },
-
-  serviceInputBox: { backgroundColor: 'rgba(0, 0, 0, 0.9)', height: '100%', width: '100%' },
-  serviceInputHeader: { alignItems: 'center', height: '20%', width: '100%' },
-  menuInputBox: { alignItems: 'center', marginBottom: 5, width: '100%' },
-  menuInput: { backgroundColor: 'white', borderRadius: 3, borderStyle: 'solid', borderWidth: 2, fontSize: wsize(5), padding: 10, width: '95%' },
-  menuInputActions: { flexDirection: 'row', justifyContent: 'space-around' },
-  menuInputTouch: { backgroundColor: 'white', borderRadius: 3, borderStyle: 'solid', borderWidth: 2, fontSize: wsize(5), margin: 5, padding: 10, width: '40%' },
-  menuInputTouchHeader: { fontSize: wsize(4), textAlign: 'center' },
-  menuPhotos: { height: '80%', width: '100%' },
-  menuPhoto: { marginBottom: 10, marginHorizontal: width * 0.025 },
 
   menu: { borderTopLeftRadius: 3, borderTopRightRadius: 3, marginVertical: 10 },
   menuImageHolder: { borderRadius: wsize(10) / 2, flexDirection: 'column', height: wsize(10), justifyContent: 'space-around', overflow: 'hidden' },

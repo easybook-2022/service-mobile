@@ -485,9 +485,9 @@ export default function Register(props) {
   }
 
   useEffect(() => {
-    getTheLocationProfile()
-
     source = axios.CancelToken.source();
+    
+    getTheLocationProfile()
 
     return () => {
       if (source) {

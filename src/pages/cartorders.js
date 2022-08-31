@@ -140,9 +140,9 @@ export default function Cartorders(props) {
   }
 
 	useEffect(() => {
-		getTheOrders()
-
     source = axios.CancelToken.source();
+
+		getTheOrders()
 
     return () => {
       if (source) {
